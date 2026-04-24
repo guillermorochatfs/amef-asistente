@@ -302,11 +302,12 @@ textarea{min-height:54px}
 
 <div class="app">
   <div class="sidebar">
-    <div class="logo">AMEF Asistente<span>PFMEA · AIAG 4th Ed. · V7.3</span></div>
+    <div class="logo">AMEF Asistente<span>PFMEA · AIAG 4th Ed. · V7.5</span></div>
     <div class="nav-section">Módulos</div>
     <button class="nav-btn active" id="nb0" onclick="goPage(0)"><span class="num">1</span> Encabezado</button>
     <button class="nav-btn" id="nb1" onclick="goPage(1)"><span class="num">2</span> Diagrama de flujo</button>
     <button class="nav-btn" id="nb2" onclick="goPage(2)"><span class="num">3</span> Tabla AMEF</button>
+    <button class="nav-btn" id="nb3" onclick="goPage(3)"><span class="num">4</span> Plan de Control</button>
     <div class="stat-box"><div class="n" id="sb_steps">0</div><div class="l">Pasos en el diagrama</div></div>
     <div class="stat-box"><div class="n" id="sb_rows">0</div><div class="l">Renglones AMEF</div></div>
     <div class="stat-box"><div class="n" id="sb_high" style="color:var(--red)">0</div><div class="l">RPN Alto (≥100)</div></div>
@@ -408,6 +409,49 @@ textarea{min-height:54px}
         </table>
       </div>
     </div>
+
+    <!-- PAGE 3: PLAN DE CONTROL -->
+    <div class="page" id="page3">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1rem;flex-wrap:wrap;gap:8px">
+        <div>
+          <div class="page-title">Plan de Control</div>
+          <div class="page-sub" style="margin-bottom:0" id="cp_sub">Generado automáticamente del PFMEA. Completa especificación, muestra, frecuencia y plan de reacción.</div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="generateControlPlan()">⟳ Regenerar del PFMEA</button>
+        </div>
+      </div>
+
+      <!-- Summary cards -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.75rem;margin-bottom:1rem" id="cp_stats"></div>
+
+      <!-- Control Plan table -->
+      <div style="overflow-x:auto;margin-bottom:1rem">
+        <table style="border-collapse:collapse;min-width:1400px;width:100%;font-size:11px" id="cp_table">
+          <thead>
+            <tr id="cp_thead">
+              <th style="background:var(--bg3);border:1px solid var(--border);padding:7px 8px;text-align:left;font-size:10px;font-weight:500;color:var(--text3);text-transform:uppercase;white-space:nowrap;min-width:55px">Op.</th>
+              <th style="background:var(--bg3);border:1px solid var(--border);padding:7px 8px;text-align:left;font-size:10px;font-weight:500;color:var(--text3);text-transform:uppercase;min-width:140px">Paso de proceso</th>
+              <th style="background:var(--bg3);border:1px solid var(--border);padding:7px 8px;text-align:left;font-size:10px;font-weight:500;color:var(--text3);text-transform:uppercase;min-width:160px">Característica del producto</th>
+              <th style="background:var(--bg3);border:1px solid var(--border);padding:7px 8px;text-align:left;font-size:10px;font-weight:500;color:var(--text3);text-transform:uppercase;min-width:160px">Característica del proceso / Causa a controlar</th>
+              <th style="background:var(--bg3);border:1px solid var(--border);padding:7px 8px;text-align:center;font-size:10px;font-weight:500;color:var(--text3);text-transform:uppercase;min-width:46px">Tipo</th>
+              <th style="background:var(--bg3);border:1px solid var(--border);padding:7px 8px;text-align:left;font-size:10px;font-weight:500;color:var(--text3);text-transform:uppercase;min-width:130px">Especificación / Tolerancia</th>
+              <th style="background:var(--bg3);border:1px solid var(--border);padding:7px 8px;text-align:left;font-size:10px;font-weight:500;color:var(--text3);text-transform:uppercase;min-width:140px">Método de evaluación / Medición</th>
+              <th style="background:var(--bg3);border:1px solid var(--border);padding:7px 8px;text-align:center;font-size:10px;font-weight:500;color:var(--text3);text-transform:uppercase;min-width:70px">Tamaño de muestra</th>
+              <th style="background:var(--bg3);border:1px solid var(--border);padding:7px 8px;text-align:center;font-size:10px;font-weight:500;color:var(--text3);text-transform:uppercase;min-width:90px">Frecuencia</th>
+              <th style="background:var(--bg3);border:1px solid var(--border);padding:7px 8px;text-align:left;font-size:10px;font-weight:500;color:var(--text3);text-transform:uppercase;min-width:140px">Responsable de control</th>
+              <th style="background:var(--bg3);border:1px solid var(--border);padding:7px 8px;text-align:left;font-size:10px;font-weight:500;color:var(--text3);text-transform:uppercase;min-width:160px">Plan de reacción si no cumple</th>
+              <th style="background:var(--bg3);border:1px solid var(--border);padding:7px 8px;text-align:center;font-size:10px;font-weight:500;color:var(--text3);text-transform:uppercase;min-width:46px">RPN ref.</th>
+            </tr>
+          </thead>
+          <tbody id="cp_tbody">
+            <tr><td colspan="12" style="text-align:center;padding:2rem;color:var(--text3);font-size:12px">
+              Completa el PFMEA primero y presiona "Regenerar del PFMEA".
+            </td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -431,6 +475,7 @@ function goPage(n){
   currentPage=n;
   if(n===1) renderPFD();
   if(n===2) renderAmefPage();
+  if(n===3) renderControlPlanPage();
 }
 
 function updateHeader(){
@@ -1399,7 +1444,104 @@ async function exportCSV(){
   // ══════════════════════════════════════════════
   // HOJA 3 — ESCALAS SEV/OCC/DET
   // ══════════════════════════════════════════════
-  const ws3=wb.addWorksheet('Escalas SEV-OCC-DET');
+  // ══════════════════════════════════════════════
+  // HOJA 3 — PLAN DE CONTROL
+  // ══════════════════════════════════════════════
+  const wsCP = wb.addWorksheet('Plan de Control');
+  [5,18,22,22,6,18,20,8,10,16,22,7].forEach((w,i)=>{ wsCP.getColumn(i+1).width=w; });
+
+  // Title
+  wsCP.mergeCells('A1:L1');
+  const cpT=wsCP.getCell('A1');
+  cpT.value='PLAN DE CONTROL — Control Plan  |  AIAG';
+  cpT.font=fn(true,14,WHITE); cpT.fill=fl(BLUE_DARK); cpT.alignment=al('left','center'); cpT.border=bdm();
+  wsCP.getRow(1).height=32;
+
+  // Header data
+  const cpHdrData=[['Número de PFMEA:',pfmea,'Preparado por:',prepBy],['Producto / Proceso:',product,'Equipo:',team],['Fecha:',revDate,'Aprobación:',approval]];
+  cpHdrData.forEach(([l1,v1,l2,v2],idx)=>{
+    const r=idx+2;
+    wsCP.mergeCells(`B${r}:F${r}`); wsCP.mergeCells(`H${r}:L${r}`);
+    const c1=wsCP.getCell(r,1); c1.value=l1; c1.font=fn(true,10,WHITE); c1.fill=fl(BLUE_MED); c1.alignment=al('left','center'); c1.border=bd();
+    const c2=wsCP.getCell(r,2); c2.value=v1; c2.font=fn(true,10); c2.fill=fl(BLUE_LIGHT); c2.alignment=al('left','center'); c2.border=bd();
+    for(let c=3;c<=6;c++){const cc=wsCP.getCell(r,c); cc.fill=fl(BLUE_LIGHT); cc.border=bd();}
+    const c7=wsCP.getCell(r,7); c7.value=l2; c7.font=fn(true,10,WHITE); c7.fill=fl(BLUE_MED); c7.alignment=al('left','center'); c7.border=bd();
+    const c8=wsCP.getCell(r,8); c8.value=v2; c8.font=fn(true,10); c8.fill=fl(BLUE_LIGHT); c8.alignment=al('left','center'); c8.border=bd();
+    for(let c=9;c<=12;c++){const cc=wsCP.getCell(r,c); cc.fill=fl(BLUE_LIGHT); cc.border=bd();}
+    wsCP.getRow(r).height=18;
+  });
+  wsCP.getRow(5).height=6;
+
+  // Legend
+  wsCP.mergeCells('A6:L6');
+  const cpLeg=wsCP.getCell('A6');
+  cpLeg.value='TIPO DE CARACTERÍSTICA:   S = Seguridad (SEV ≥ 9)   P = Producto (RPN ≥ 100 o SEV ≥ 7)   C = Proceso (resto)';
+  cpLeg.font=fn(false,9,'555555'); cpLeg.fill=fl(GRAY); cpLeg.alignment=al('left','center');
+  wsCP.getRow(6).height=16;
+
+  // Column headers
+  const cpHdrs=['Op.','Paso de proceso','Característica del producto\n(Modo de falla a prevenir)',
+    'Característica del proceso\n(Causa a controlar)','Tipo','Especificación / Tolerancia',
+    'Método de evaluación / Medición','Tamaño\nde muestra','Frecuencia\nde control',
+    'Responsable\nde control','Plan de reacción\nsi no cumple','RPN\nref.'];
+  cpHdrs.forEach((h,i)=>{
+    const c=wsCP.getCell(7,i+1); c.value=h; c.font=fn(true,9,WHITE);
+    c.fill=fl(BLUE_DARK); c.alignment=al('center','center'); c.border=bdm();
+  });
+  wsCP.getRow(7).height=30;
+
+  // Data rows
+  const cpData = controlPlan && controlPlan.length>0 ? controlPlan : [];
+  let cpLastOp='';
+  if(cpData.length===0){
+    wsCP.mergeCells('A8:L8');
+    const empty=wsCP.getCell('A8');
+    empty.value='Plan de Control no generado — completar PFMEA y presionar "Regenerar del PFMEA" en la app antes de exportar.';
+    empty.font=fn(false,10,'888888'); empty.alignment=al('center','center');
+    wsCP.getRow(8).height=30;
+  } else {
+    cpData.forEach((cp,idx)=>{
+      const cpRow=idx+8;
+      const isRep=cp.op_id===cpLastOp; cpLastOp=cp.op_id;
+      const rowBg=isRep?REPEAT:WHITE;
+      const tipoColor=cp.tipo==='S'?RED_T:cp.tipo==='P'?YEL_T:'2E75B6';
+      const tipoBg=cp.tipo==='S'?RED_L:cp.tipo==='P'?YEL_L:BLUE_LIGHT;
+      const [lvl,rpnBg,rpnTx]=rpnInfo(cp.rpn||0);
+
+      function cpsc(col,val,bold,bg,tx,h,v,sz,med){
+        const c=wsCP.getCell(cpRow,col); c.value=(val!==undefined&&val!==null)?val:'';
+        c.font=fn(bold,sz||9,tx||'000000'); c.fill=fl(bg||rowBg);
+        c.alignment=al(h||'left',v||'top'); c.border=med?bdm():bd();
+      }
+      cpsc(1, cp.op_id||'',        true,BLUE_LIGHT,null,'center','center',9,true);
+      cpsc(2, cp.proc_step||'',    false,rowBg,isRep?'888888':'000000');
+      cpsc(3, cp.prod_char||'',    true,rowBg,'000000');
+      cpsc(4, cp.proc_char||'',    false,rowBg,'444444',null,null,8);
+      cpsc(5, cp.tipo||'',         true,tipoBg,tipoColor,'center','center',11);
+      cpsc(6, cp.spec||'',         false,rowBg,null);
+      cpsc(7, cp.method||'',       false,rowBg,'444444',null,null,8);
+      cpsc(8, cp.sample||'',       false,rowBg,null,'center','center');
+      cpsc(9, cp.freq||'',         false,rowBg,null,'center','center');
+      cpsc(10,cp.resp||'',         false,rowBg,'444444',null,null,8);
+      cpsc(11,cp.reaction||'',     false,rowBg,null,null,null,8);
+      cpsc(12,cp.rpn||0,           true,rpnBg,rpnTx,'center','center',10,true);
+      wsCP.getRow(cpRow).height=40;
+    });
+
+    // Summary
+    const csr=8+cpData.length+1;
+    const sCount=cpData.filter(c=>c.tipo==='S').length;
+    const pCount=cpData.filter(c=>c.tipo==='P').length;
+    const cCount=cpData.filter(c=>c.tipo==='C').length;
+    [[1,'Total líneas:',cpData.length,BLUE_LIGHT,'1F3864'],[3,'S — Seguridad:',sCount,RED_L,RED_T],[5,'P — Producto:',pCount,YEL_L,YEL_T],[7,'C — Proceso:',cCount,BLUE_LIGHT,BLUE_MED]].forEach(([col,lbl,val,bg,tx])=>{
+      const c1=wsCP.getCell(csr,col,lbl); c1.font=fn(true,9,tx); c1.fill=fl(bg); c1.alignment=al('left','center'); c1.border=bd();
+      const c2=wsCP.getCell(csr,col+1,val); c2.font=fn(true,11,tx); c2.fill=fl(bg); c2.alignment=al('center','center'); c2.border=bd();
+    });
+    wsCP.getRow(csr).height=22;
+  }
+  wsCP.views=[{state:'frozen',ySplit:7}];
+
+    const ws3=wb.addWorksheet('Escalas SEV-OCC-DET');
   [6,22,50,50,10].forEach((w,i)=>{ ws3.getColumn(i+1).width=w; });
   ws3.mergeCells('A1:E1');
   const ts=ws3.getCell('A1'); ts.value='TABLAS DE REFERENCIA — SEV, OCC, DET  |  AIAG 4th Edition';
@@ -1431,10 +1573,154 @@ async function exportCSV(){
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a'); a.href=url; a.download='PFMEA_'+pfmea+'.xlsx'; a.click();
   URL.revokeObjectURL(url);
-  showToast('Excel descargado: Diagrama de flujo + PFMEA + Escalas');
+  showToast('Excel descargado: PFD + PFMEA + Plan de Control + Escalas');
 }
 
 function dl(content,filename,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([content],{type}));a.download=filename;a.click();}
+
+
+// ==================== PLAN DE CONTROL ====================
+
+let controlPlan = []; // [{op_id, proc_step, prod_char, proc_char, tipo, spec, method, sample, freq, resp, reaction, rpn}]
+
+function generateControlPlan(){
+  if(rows.length===0){ alert('No hay renglones en el PFMEA. Completa el análisis primero.'); return; }
+
+  // Build control plan from PFMEA rows — one CP row per PFMEA row
+  // Group by op+causa to avoid duplicates, keep existing user edits
+  const newCP = [];
+  const seen = new Set();
+
+  rows.forEach(r => {
+    const key = r.op_id + '||' + r.failure_cause;
+    if(seen.has(key)) return;
+    seen.add(key);
+
+    // Find existing CP row to preserve user edits
+    const existing = controlPlan.find(c => c.op_id===r.op_id && c.proc_char===r.failure_cause);
+
+    newCP.push({
+      op_id:      r.op_id,
+      proc_step:  r.proc_step,
+      prod_char:  r.failure_mode,          // Modo de falla = característica del producto a asegurar
+      proc_char:  r.failure_cause,          // Causa = característica del proceso a controlar
+      tipo:       rpnTipo(r.sev, r.rpn),   // P = producto, C = proceso, S = seguridad
+      spec:       existing ? existing.spec      : '',
+      method:     r.ctrl_det || r.ctrl_prev || '',  // Pre-fill from PFMEA detection controls
+      sample:     existing ? existing.sample    : '',
+      freq:       existing ? existing.freq      : '',
+      resp:       existing ? existing.resp      : (r.resp||''),
+      reaction:   existing ? existing.reaction  : '',
+      rpn:        r.rpn,
+      sev:        r.sev,
+    });
+  });
+
+  controlPlan = newCP;
+  renderControlPlanPage();
+  showToast('Plan de Control generado — ' + controlPlan.length + ' líneas');
+}
+
+function rpnTipo(sev, rpn){
+  if(sev>=9) return 'S'; // Safety — seguridad
+  if(rpn>=100 || sev>=7) return 'P'; // Product characteristic
+  return 'C'; // Process characteristic
+}
+
+function tipoLabel(t){
+  if(t==='S') return {lbl:'S — Seguridad', color:'var(--red)'};
+  if(t==='P') return {lbl:'P — Producto', color:'var(--yellow)'};
+  return {lbl:'C — Proceso', color:'var(--accent)'};
+}
+
+function renderControlPlanPage(){
+  // Update sub
+  const pfmea = document.getElementById('pfmea_no').value||'Sin número';
+  const prod  = document.getElementById('product').value||'Sin producto';
+  document.getElementById('cp_sub').innerHTML =
+    '<strong>'+pfmea+'</strong> · '+prod+' · <strong>'+controlPlan.length+'</strong> línea(s)';
+
+  // Stats
+  const stats = document.getElementById('cp_stats');
+  const s_count = controlPlan.filter(c=>c.tipo==='S').length;
+  const p_count = controlPlan.filter(c=>c.tipo==='P').length;
+  const c_count = controlPlan.filter(c=>c.tipo==='C').length;
+  const complete = controlPlan.filter(c=>c.spec&&c.freq&&c.reaction).length;
+  stats.innerHTML = [
+    ['Total líneas', controlPlan.length, 'var(--accent)'],
+    ['S — Seguridad', s_count, 'var(--red)'],
+    ['P — Producto', p_count, 'var(--yellow)'],
+    ['Completas', complete+'/'+controlPlan.length, 'var(--green)'],
+  ].map(([l,n,c])=>`<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem">
+    <div style="font-family:var(--mono);font-size:22px;font-weight:500;color:${c}">${n}</div>
+    <div style="font-size:10px;color:var(--text3);margin-top:2px">${l}</div>
+  </div>`).join('');
+
+  // Table
+  const tbody = document.getElementById('cp_tbody');
+  if(controlPlan.length===0){
+    tbody.innerHTML='<tr><td colspan="12" style="text-align:center;padding:2rem;color:var(--text3)">Completa el PFMEA y presiona "Regenerar del PFMEA".</td></tr>';
+    return;
+  }
+
+  let lastOp = '';
+  tbody.innerHTML = '';
+  controlPlan.forEach((c,ci) => {
+    const isRepOp = c.op_id === lastOp;
+    lastOp = c.op_id;
+    const tipo = tipoLabel(c.tipo);
+    const rpnCls = c.rpn>=100?'high':c.rpn>=40?'med':'low';
+    const rowBg = isRepOp ? 'background:rgba(79,124,255,0.03)' : '';
+
+    const tr = document.createElement('tr');
+    tr.style.cssText = rowBg;
+    tr.innerHTML = `
+      <td style="border:1px solid var(--border);padding:0;vertical-align:top">
+        <div style="padding:6px 8px;font-family:var(--mono);font-size:10px;color:var(--accent);background:rgba(79,124,255,0.08);text-align:center">${c.op_id}</div>
+      </td>
+      <td style="border:1px solid var(--border);padding:6px 8px;font-size:11px;color:${isRepOp?'var(--text3)':'var(--text2)'};font-style:${isRepOp?'italic':'normal'}">${isRepOp?'↳ '+c.proc_step:c.proc_step}</td>
+      <td style="border:1px solid var(--border);padding:6px 8px;font-size:11px;color:var(--text);font-weight:500">${c.prod_char}</td>
+      <td style="border:1px solid var(--border);padding:6px 8px;font-size:10px;color:var(--text2)">${c.proc_char}</td>
+      <td style="border:1px solid var(--border);padding:6px 8px;text-align:center">
+        <span style="font-size:10px;font-weight:500;color:${tipo.color}">${c.tipo}</span>
+      </td>
+      <td style="border:1px solid var(--border);padding:4px 6px">
+        <input type="text" value="${c.spec||''}" placeholder="Ej: ±0.1mm / Presencia / ≥95%"
+          style="width:100%;background:transparent;border:none;color:var(--text);font-size:11px;outline:none;padding:2px"
+          onchange="updateCP(${ci},'spec',this.value)">
+      </td>
+      <td style="border:1px solid var(--border);padding:6px 8px;font-size:10px;color:var(--text2)">${c.method||'—'}</td>
+      <td style="border:1px solid var(--border);padding:4px 6px">
+        <input type="text" value="${c.sample||''}" placeholder="Ej: 5 pzas / 100%"
+          style="width:100%;background:transparent;border:none;color:var(--text);font-size:11px;outline:none;padding:2px;text-align:center"
+          onchange="updateCP(${ci},'sample',this.value)">
+      </td>
+      <td style="border:1px solid var(--border);padding:4px 6px">
+        <input type="text" value="${c.freq||''}" placeholder="Ej: Cada turno / 1/hora"
+          style="width:100%;background:transparent;border:none;color:var(--text);font-size:11px;outline:none;padding:2px;text-align:center"
+          onchange="updateCP(${ci},'freq',this.value)">
+      </td>
+      <td style="border:1px solid var(--border);padding:4px 6px">
+        <input type="text" value="${c.resp||''}" placeholder="Ej: Operador / Inspector"
+          style="width:100%;background:transparent;border:none;color:var(--text);font-size:11px;outline:none;padding:2px"
+          onchange="updateCP(${ci},'resp',this.value)">
+      </td>
+      <td style="border:1px solid var(--border);padding:4px 6px">
+        <input type="text" value="${c.reaction||''}" placeholder="Ej: Separar y notificar a Calidad"
+          style="width:100%;background:transparent;border:none;color:var(--text);font-size:11px;outline:none;padding:2px"
+          onchange="updateCP(${ci},'reaction',this.value)">
+      </td>
+      <td style="border:1px solid var(--border);padding:6px 8px;text-align:center">
+        <span class="badge b${rpnCls}">${c.rpn}</span>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function updateCP(ci, field, val){
+  controlPlan[ci][field] = val;
+}
 
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2800);}
 </script>
