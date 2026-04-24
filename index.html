@@ -1,0 +1,1188 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Asistente AMEF — AIAG (Sin IA)</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0f1117;--bg2:#181c27;--bg3:#1e2330;--border:#2a2f3e;--border2:#3a4055;--text:#e8eaf0;--text2:#8b92a8;--text3:#555d78;--accent:#4f7cff;--accent2:#3a63e0;--green:#2dd4a0;--yellow:#f5c542;--red:#f05a5a;--green-bg:rgba(45,212,160,0.08);--yellow-bg:rgba(245,197,66,0.08);--red-bg:rgba(240,90,90,0.08);--radius:8px;--radius-lg:12px;--mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;min-height:100vh}
+.header-banner{background:var(--bg2);border-bottom:1px solid var(--border);padding:.75rem 2rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.header-banner .title{font-family:var(--mono);font-size:12px;color:var(--text2)}
+.header-banner .pfmea-ref{font-family:var(--mono);font-size:11px;color:var(--accent)}
+.app{display:flex;min-height:calc(100vh - 44px)}
+.sidebar{width:220px;background:var(--bg2);border-right:1px solid var(--border);padding:1.25rem 1rem;flex-shrink:0;position:sticky;top:44px;height:calc(100vh - 44px);overflow-y:auto}
+.logo{font-family:var(--mono);font-size:10px;color:var(--accent);letter-spacing:.06em;text-transform:uppercase;margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:1px solid var(--border)}
+.logo span{display:block;color:var(--text3);font-size:9px;margin-top:2px}
+.nav-section{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.1em;margin:1rem 0 .4rem}
+.nav-btn{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:var(--radius);cursor:pointer;font-size:12px;color:var(--text2);border:none;background:none;width:100%;text-align:left;transition:all .15s;margin-bottom:2px}
+.nav-btn:hover{background:var(--bg3);color:var(--text)}
+.nav-btn.active{background:rgba(79,124,255,0.12);color:var(--accent)}
+.nav-btn .num{width:18px;height:18px;border-radius:50%;border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:9px;font-family:var(--mono);flex-shrink:0}
+.nav-btn.active .num{border-color:var(--accent);background:rgba(79,124,255,0.15)}
+.nav-btn.done .num{border-color:var(--green);background:rgba(45,212,160,0.1);color:var(--green)}
+.stat-box{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-top:.75rem}
+.stat-box .n{font-family:var(--mono);font-size:22px;font-weight:500;color:var(--accent)}
+.stat-box .l{font-size:10px;color:var(--text3);margin-top:1px}
+.main{flex:1;padding:1.5rem;overflow-x:auto}
+.page{display:none}
+.page.active{display:block;animation:fi .2s ease}
+@keyframes fi{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+.page-title{font-size:18px;font-weight:500;margin-bottom:3px}
+.page-sub{font-size:12px;color:var(--text2);margin-bottom:1.25rem}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem;margin-bottom:1rem}
+.card-title{font-size:10px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.875rem}
+.field{margin-bottom:.875rem}
+.fl{font-size:11px;color:var(--text2);margin-bottom:4px;display:flex;align-items:center;gap:5px}
+.fl .req{color:var(--red)}.fl .hint{font-size:10px;color:var(--text3)}
+input[type=text],input[type=date],textarea,select{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--sans);font-size:12px;padding:7px 10px;outline:none;resize:vertical;transition:border-color .15s}
+input[type=text]:focus,textarea:focus,select:focus{border-color:var(--accent)}
+select option{background:var(--bg3)}
+textarea{min-height:54px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.btn{padding:7px 14px;border-radius:var(--radius);border:1px solid var(--border2);background:transparent;color:var(--text);font-family:var(--sans);font-size:12px;cursor:pointer;transition:all .15s}
+.btn:hover{background:var(--bg3)}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:500}
+.btn-primary:hover{background:var(--accent2)}
+.btn-ai{background:rgba(79,124,255,0.08);border-color:rgba(79,124,255,0.25);color:var(--accent);font-size:11px;padding:5px 10px}
+.btn-ai:hover{background:rgba(79,124,255,0.15)}
+.btn-green{background:rgba(45,212,160,0.08);border-color:rgba(45,212,160,0.25);color:var(--green);font-size:12px}
+.btn-green:hover{background:rgba(45,212,160,0.15)}
+.btn-danger{border-color:rgba(240,90,90,0.2);color:var(--red);font-size:11px;padding:4px 8px}
+.btn-danger:hover{background:var(--red-bg)}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.nav-row{display:flex;justify-content:space-between;align-items:center;margin-top:1.25rem}
+
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.chip{display:inline-block;padding:4px 10px;border:1px solid #3a4055;border-radius:20px;font-size:11px;cursor:pointer;color:#8b92a8;background:#1e2330;transition:all .12s;user-select:none}
+.chip:hover{border-color:#4f7cff;color:var(--text)}
+.chip.sel{background:rgba(79,124,255,0.12);border-color:#4f7cff;color:#4f7cff}
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:500}
+.blow{background:var(--green-bg);color:var(--green);border:1px solid rgba(45,212,160,0.2)}
+.bmed{background:var(--yellow-bg);color:var(--yellow);border:1px solid rgba(245,197,66,0.2)}
+.bhigh{background:var(--red-bg);color:var(--red);border:1px solid rgba(240,90,90,0.2)}
+.rpn-guide{font-size:11px;color:var(--text2);padding:.5rem .75rem;background:var(--bg3);border-radius:var(--radius);border-left:2px solid var(--border2);margin-bottom:.75rem}
+.rpn-guide.gl{border-left-color:var(--green)}.rpn-guide.gm{border-left-color:var(--yellow)}.rpn-guide.gh{border-left-color:var(--red)}
+.divider{border:none;border-top:1px solid var(--border);margin:.875rem 0}
+.toast{position:fixed;bottom:1.5rem;right:1.5rem;background:var(--bg2);border:1px solid var(--green);color:var(--green);padding:9px 14px;border-radius:var(--radius);font-size:12px;transform:translateY(60px);opacity:0;transition:all .3s;z-index:999}
+.toast.show{transform:translateY(0);opacity:1}
+
+/* ── AMEF TABLE ── */
+.amef-table-wrap{overflow-x:auto;margin-bottom:1rem}
+.amef-table{border-collapse:collapse;min-width:1100px;width:100%;font-size:11px}
+.amef-table th{background:var(--bg3);border:1px solid var(--border);padding:6px 8px;text-align:left;font-size:10px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+.amef-table td{border:1px solid var(--border);padding:0;vertical-align:top;background:var(--bg2)}
+.amef-table tr:hover td{background:var(--bg3)}
+.td-inner{padding:6px 8px;min-height:32px;max-height:80px;overflow:hidden}
+.cell-sev,.cell-occ,.cell-det{font-family:var(--mono);text-align:center;font-size:13px;font-weight:500}
+.cell-rpn{font-family:var(--mono);font-weight:500;text-align:center}
+.cell-actions{white-space:nowrap;text-align:center}
+.op-tag{font-family:var(--mono);font-size:10px;color:var(--accent);background:rgba(79,124,255,0.08);padding:2px 6px;border-radius:4px;display:inline-block}
+.row-repeat td.td-modo,.row-repeat td.td-efecto,.row-repeat td.td-sev{background:rgba(79,124,255,0.03);color:var(--text3);font-style:italic;font-size:10px}
+
+/* ── PROCESS FLOW ── */
+.pfd-canvas-wrap{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:auto;position:relative;min-height:500px}
+#pfd_canvas{display:block}
+.pfd-toolbar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:.875rem;align-items:center}
+.pfd-tool-btn{padding:6px 12px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text2);font-size:11px;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all .15s}
+.pfd-tool-btn:hover{background:var(--bg2);color:var(--text)}
+.pfd-tool-btn.active{background:rgba(79,124,255,0.12);border-color:var(--accent);color:var(--accent)}
+.pfd-legend{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:.875rem}
+.pfd-legend-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2)}
+
+/* ── MODAL ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:200;display:none;align-items:flex-start;justify-content:center;padding:1rem;overflow-y:auto}
+.modal-overlay.open{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);width:100%;max-width:720px;padding:0;margin:auto}
+.modal-header{padding:1.25rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.modal-header-title{font-size:15px;font-weight:500}
+.modal-header-sub{font-size:11px;color:var(--text2);margin-top:2px}
+.modal-close{background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;padding:4px 8px;border-radius:var(--radius)}
+.modal-close:hover{color:var(--text);background:var(--bg3)}
+.etapa{display:none;padding:1.5rem}
+.etapa.active{display:block}
+.etapa-title{font-size:13px;font-weight:500;color:var(--accent);margin-bottom:.25rem;display:flex;align-items:center;gap:8px}
+.etapa-num{width:22px;height:22px;border-radius:50%;background:rgba(79,124,255,0.15);border:1px solid var(--accent);display:flex;align-items:center;justify-content:center;font-size:10px;font-family:var(--mono)}
+.etapa-sub{font-size:11px;color:var(--text2);margin-bottom:1.25rem}
+.progress-bar{display:flex;gap:4px;padding:1rem 1.5rem;border-bottom:1px solid var(--border);background:var(--bg)}
+.progress-step{flex:1;height:3px;border-radius:2px;background:var(--border2);transition:background .3s}
+.progress-step.done{background:var(--green)}.progress-step.active{background:var(--accent)}
+.progress-labels{display:flex;padding:.5rem 1.5rem 0;gap:4px}
+.progress-label{flex:1;font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em}
+.progress-label.active{color:var(--accent)}
+.modo-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:.875rem;margin-bottom:.75rem}
+.modo-card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem}
+.causa-saved{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:.5rem}
+.causa-saved-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:.25rem}
+.causa-saved-tag{font-family:var(--mono);font-size:10px;color:var(--yellow)}
+
+/* ── TABLA MODAL ── */
+.tm-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:500;display:none;align-items:flex-start;justify-content:center;padding:1rem;overflow-y:auto}
+.tm-overlay.open{display:flex}
+.tm-box{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);width:100%;max-width:860px;margin:auto;overflow:hidden}
+.tm-header{background:var(--bg);border-bottom:1px solid var(--border);padding:1rem 1.5rem;display:flex;justify-content:space-between;align-items:center}
+.tm-table{width:100%;border-collapse:collapse;font-size:12px}
+.tm-table th{background:var(--bg3);border:1px solid var(--border);padding:7px 10px;text-align:left;font-size:11px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em}
+.tm-table td{border:1px solid var(--border);padding:8px 10px;vertical-align:top;color:var(--text2);line-height:1.45}
+.tm-table tr.tm-sel:hover td{background:rgba(79,124,255,0.08);cursor:pointer;color:var(--text)}
+.tm-table tr.tm-sel:hover td.tm-n{background:rgba(79,124,255,0.2);color:var(--accent)}
+.tm-n{font-family:var(--mono);font-size:16px;font-weight:500;text-align:center;white-space:nowrap;min-width:36px}
+.tm-lvl{font-weight:500;white-space:nowrap;color:var(--text)}
+.tm-high{color:var(--red)}.tm-med{color:var(--yellow)}.tm-low{color:var(--green)}
+.tm-sec{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:.5rem .75rem;margin-bottom:.75rem;font-size:11px;color:var(--text2)}
+
+/* ── PFD STEP CARDS ── */
+.pfd-step-list{display:flex;flex-direction:column;gap:0}
+.pfd-step-card{display:flex;align-items:stretch;position:relative}
+.pfd-step-card .connector{width:40px;display:flex;flex-direction:column;align-items:center;flex-shrink:0}
+.pfd-step-card .connector .line{flex:1;width:2px;background:var(--border2)}
+.pfd-step-card .connector .line.top{min-height:20px}
+.pfd-step-card .connector .line.bottom{min-height:20px}
+.pfd-step-card .connector .sym{width:36px;height:36px;display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative;z-index:1}
+.pfd-step-card .content{flex:1;padding:.75rem 1rem;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);margin:.25rem 0;transition:all .15s}
+.pfd-step-card .content:hover{border-color:var(--border2)}
+.pfd-step-card .content.selected{border-color:var(--accent);background:rgba(79,124,255,0.05)}
+.pfd-step-card .content .step-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:.25rem}
+.pfd-step-card .content .step-id{font-family:var(--mono);font-size:10px;color:var(--accent)}
+.pfd-step-card .content .step-type{font-size:10px;color:var(--text3)}
+.pfd-step-card .content .step-name{font-size:13px;font-weight:500;margin-bottom:2px}
+.pfd-step-card .content .step-func{font-size:11px;color:var(--text2)}
+.pfd-step-card .content .step-actions{display:flex;gap:4px;margin-top:.5rem}
+
+/* Decision branches */
+.decision-branches{display:flex;gap:1rem;margin:.25rem 0 .25rem 40px}
+.decision-branch{flex:1;padding:.5rem .75rem;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);font-size:11px;color:var(--text2);border-left:3px solid var(--border2)}
+.decision-branch.yes{border-left-color:var(--green)}
+.decision-branch.no{border-left-color:var(--red)}
+
+/* Symbol SVGs */
+.sym-op{width:32px;height:32px;border-radius:50%;background:var(--bg2);border:2px solid var(--accent);display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--accent);font-family:var(--mono)}
+.sym-insp{width:32px;height:32px;background:var(--bg2);border:2px solid var(--yellow);transform:rotate(45deg);display:flex;align-items:center;justify-content:center}
+.sym-insp span{transform:rotate(-45deg);font-size:10px;color:var(--yellow);font-family:var(--mono)}
+.sym-transp{width:32px;height:16px;background:var(--bg2);border:2px solid var(--green);border-radius:2px;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--green);font-family:var(--mono)}
+.sym-store{width:0;height:0;border-left:18px solid transparent;border-right:18px solid transparent;border-top:28px solid var(--border2);position:relative}
+.sym-store-inner{position:absolute;top:-28px;left:-14px;width:28px;height:28px;display:flex;align-items:center;justify-content:center}
+.sym-dec{width:32px;height:32px;background:var(--bg2);border:2px solid var(--red);transform:rotate(45deg);display:flex;align-items:center;justify-content:center}
+.sym-dec span{transform:rotate(-45deg);font-size:9px;color:var(--red);font-family:var(--mono)}
+.sym-start{width:32px;height:32px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:9px;color:#fff;font-weight:500}
+.sym-end{width:32px;height:32px;border-radius:50%;background:var(--bg3);border:2px solid var(--text3);display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--text3);font-weight:500}
+
+/* PFD add step modal */
+.step-type-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem;margin-bottom:1rem}
+.step-type-btn{padding:1rem;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg3);cursor:pointer;text-align:center;transition:all .15s}
+.step-type-btn:hover{border-color:var(--accent);background:rgba(79,124,255,0.05)}
+.step-type-btn.sel{border-color:var(--accent);background:rgba(79,124,255,0.1)}
+.step-type-btn .icon{font-size:24px;margin-bottom:.4rem}
+.step-type-btn .label{font-size:11px;font-weight:500;color:var(--text)}
+.step-type-btn .desc{font-size:10px;color:var(--text3);margin-top:2px}
+</style>
+</head>
+<body>
+<div class="toast" id="toast"></div>
+
+<!-- ── ADD STEP MODAL ── -->
+<div class="modal-overlay" id="step_modal" onclick="closeStepModalOutside(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-header-title" id="step_modal_title">Agregar paso al diagrama</div>
+        <div class="modal-header-sub">Define el tipo y los datos del paso de proceso</div>
+      </div>
+      <button class="modal-close" onclick="closeStepModal()">✕</button>
+    </div>
+    <div style="padding:1.5rem">
+      <div class="field">
+        <div class="fl">Tipo de paso <span class="req">*</span></div>
+        <div class="step-type-grid">
+          <div class="step-type-btn" id="stype_op" onclick="selectStepType('op')">
+            <div class="icon">⭕</div>
+            <div class="label">Operación</div>
+            <div class="desc">Manufactura, ensamble, proceso</div>
+          </div>
+          <div class="step-type-btn" id="stype_insp" onclick="selectStepType('insp')">
+            <div class="icon">🔷</div>
+            <div class="label">Inspección</div>
+            <div class="desc">Verificación de calidad</div>
+          </div>
+          <div class="step-type-btn" id="stype_transp" onclick="selectStepType('transp')">
+            <div class="icon">➡️</div>
+            <div class="label">Transporte</div>
+            <div class="desc">Movimiento de material</div>
+          </div>
+          <div class="step-type-btn" id="stype_store" onclick="selectStepType('store')">
+            <div class="icon">🔺</div>
+            <div class="label">Almacenamiento</div>
+            <div class="desc">Espera o inventario</div>
+          </div>
+          <div class="step-type-btn" id="stype_dec" onclick="selectStepType('dec')">
+            <div class="icon">🔶</div>
+            <div class="label">Decisión</div>
+            <div class="desc">Punto de control Sí/No</div>
+          </div>
+        </div>
+      </div>
+      <div class="g2">
+        <div class="field"><div class="fl">ID / Número de operación <span class="req">*</span></div><input type="text" id="s_op_id" placeholder="Ej: 10, 20, 30.1"></div>
+        <div class="field"><div class="fl">Nombre del paso <span class="req">*</span></div><input type="text" id="s_name" placeholder="Ej: Colocación y prensado del filtro"></div>
+      </div>
+      <div class="field"><div class="fl">Función / Requisito <span class="hint">— ¿Qué debe lograr correctamente?</span></div><textarea id="s_func" rows="2" placeholder="Ej: Asegurar que cada filtro quede a la altura correcta con la presión correcta de la prensa Schmidt."></textarea></div>
+      <div id="dec_fields" style="display:none">
+        <div class="g2">
+          <div class="field"><div class="fl" style="color:var(--green)">Resultado SÍ → continúa a</div><input type="text" id="s_yes" placeholder="Ej: Siguiente operación"></div>
+          <div class="field"><div class="fl" style="color:var(--red)">Resultado NO → va a</div><input type="text" id="s_no" placeholder="Ej: Retrabajo / Scrap"></div>
+        </div>
+      </div>
+      <div class="btn-row" style="margin-top:1rem">
+        <button class="btn btn-primary" onclick="saveStep()">✓ Agregar al diagrama</button>
+        <button class="btn" onclick="closeStepModal()">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── AMEF ROW MODAL ── -->
+<div class="modal-overlay" id="amef_modal" onclick="closeAmefModalOutside(event)">
+  <div class="modal" style="max-width:760px">
+    <div class="modal-header">
+      <div>
+        <div class="modal-header-title" id="amef_modal_title">Analizar paso de proceso</div>
+        <div class="modal-header-sub" id="amef_modal_sub"></div>
+      </div>
+      <button class="modal-close" onclick="confirmCloseAmefModal()">✕</button>
+    </div>
+    <div class="progress-bar">
+      <div class="progress-step active" id="ps1"></div>
+      <div class="progress-step" id="ps2"></div>
+    </div>
+    <div class="progress-labels">
+      <div class="progress-label active" id="pl1">1 · Modos de falla y efectos</div>
+      <div class="progress-label" id="pl2">2 · Causas y controles</div>
+    </div>
+    <div class="etapa active" id="etapa1">
+      <div class="etapa-title"><span class="etapa-num">1</span>Modos de falla potenciales</div>
+      <div class="etapa-sub">Selecciona o escribe todos los modos de falla para este paso. Cada modo generará sus propios renglones en la tabla AMEF.</div>
+
+      <div id="modos_list" style="margin-top:.875rem"></div>
+      <div style="display:flex;gap:8px;margin-top:.5rem">
+        <input type="text" id="e1_modo_manual" placeholder="O escribe un modo de falla manualmente..." style="flex:1">
+        <button class="btn" onclick="addModoManual()">+ Agregar</button>
+      </div>
+      <div class="nav-row"><button class="btn" onclick="confirmCloseAmefModal()">Cancelar</button><button class="btn btn-primary" onclick="goEtapa2()">Siguiente: Causas →</button></div>
+    </div>
+    <div class="etapa" id="etapa2">
+      <div class="etapa-title"><span class="etapa-num">2</span>Causas y RPN por modo de falla</div>
+      <div class="etapa-sub">Para cada modo agrega sus causas. Cada causa genera un renglón AIAG con su OCC, controles, DET y RPN.</div>
+      <div id="modos_causas_container"></div>
+      <div class="nav-row"><button class="btn" onclick="goEtapa1Back()">← Atrás</button><button class="btn btn-primary" onclick="saveAllRows()">✓ Guardar todos los renglones</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── TABLA MODAL SEV/OCC/DET ── -->
+<div class="tm-overlay" id="tm_overlay" onclick="closeTmOutside(event)">
+  <div class="tm-box">
+    <div class="tm-header">
+      <div><div id="tm_title" style="font-size:14px;font-weight:500"></div><div id="tm_sub" style="font-size:11px;color:var(--text2);margin-top:2px"></div></div>
+      <button onclick="closeTm()" style="background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer">✕</button>
+    </div>
+    <div id="tm_body" style="padding:1.25rem;overflow-x:auto"></div>
+  </div>
+</div>
+
+<!-- ── HEADER ── -->
+<div class="header-banner">
+  <span class="title">Asistente AMEF</span>
+  <span class="pfmea-ref" id="header_ref">Sin número de PFMEA</span>
+</div>
+
+<div class="app">
+  <div class="sidebar">
+    <div class="logo">AMEF Asistente<span>PFMEA · AIAG 4th Ed. · V7.0-noAI</span></div>
+    <div class="nav-section">Módulos</div>
+    <button class="nav-btn active" id="nb0" onclick="goPage(0)"><span class="num">1</span> Encabezado</button>
+    <button class="nav-btn" id="nb1" onclick="goPage(1)"><span class="num">2</span> Diagrama de flujo</button>
+    <button class="nav-btn" id="nb2" onclick="goPage(2)"><span class="num">3</span> Tabla AMEF</button>
+    <div class="stat-box"><div class="n" id="sb_steps">0</div><div class="l">Pasos en el diagrama</div></div>
+    <div class="stat-box"><div class="n" id="sb_rows">0</div><div class="l">Renglones AMEF</div></div>
+    <div class="stat-box"><div class="n" id="sb_high" style="color:var(--red)">0</div><div class="l">RPN Alto (≥100)</div></div>
+  </div>
+
+  <div class="main">
+
+    <!-- PAGE 0: ENCABEZADO -->
+    <div class="page active" id="page0">
+      <div class="page-title">Información general del AMEF</div>
+      <div class="page-sub">Completa los datos del documento. Solo se llenan una vez.</div>
+      <div class="card">
+        <div class="card-title">Identificación del documento</div>
+        <div class="g2">
+          <div class="field"><div class="fl">Número de PFMEA <span class="req">*</span></div><input type="text" id="pfmea_no" placeholder="Ej: PFMEA-CYD-2025-001" oninput="updateHeader()"></div>
+          <div class="field"><div class="fl">Producto / Proceso <span class="req">*</span></div><input type="text" id="product" placeholder="Ej: Ensamble de filtros — Tip Expansion"></div>
+        </div>
+        <div class="g2">
+          <div class="field"><div class="fl">Preparado por <span class="req">*</span></div><input type="text" id="prepared_by" placeholder="Nombre del responsable"></div>
+          <div class="field"><div class="fl">Fecha de revisión</div><input type="date" id="rev_date"></div>
+        </div>
+        <div class="field"><div class="fl">Miembros del equipo</div><input type="text" id="team_members" placeholder="Ej: Ing. Rocha, Ing. García, Técnico López..."></div>
+        <div class="field"><div class="fl">Aprobación</div><input type="text" id="approval" placeholder="Nombre o referencia del aprobador"></div>
+      </div>
+      <div class="nav-row"><span></span><button class="btn btn-primary" onclick="goPage(1)">Siguiente: Diagrama de flujo →</button></div>
+    </div>
+
+    <!-- PAGE 1: PROCESS FLOW DIAGRAM -->
+    <div class="page" id="page1">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1rem;flex-wrap:wrap;gap:8px">
+        <div>
+          <div class="page-title">Diagrama de flujo del proceso</div>
+          <div class="page-sub" style="margin-bottom:0">Construye el flujo usando los símbolos AIAG. El PFMEA se alimentará automáticamente de las operaciones de manufactura.</div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="openStepModal()">+ Agregar paso</button>
+          <button class="btn btn-ai" onclick="exportPFD()">↓ Exportar PDF</button>
+          <button class="btn btn-primary" onclick="goPage(2)">Ir al PFMEA →</button>
+        </div>
+      </div>
+
+      <!-- Legend -->
+      <div class="pfd-legend">
+        <div class="pfd-legend-item"><div class="sym-op" style="width:20px;height:20px;font-size:8px">O</div> Operación</div>
+        <div class="pfd-legend-item"><div class="sym-insp" style="width:18px;height:18px"><span style="font-size:7px">I</span></div> Inspección</div>
+        <div class="pfd-legend-item"><div class="sym-transp" style="width:20px;height:10px;font-size:7px">T</div> Transporte</div>
+        <div class="pfd-legend-item"><div style="width:0;height:0;border-left:10px solid transparent;border-right:10px solid transparent;border-top:16px solid var(--border2)"></div> Almacenamiento</div>
+        <div class="pfd-legend-item"><div class="sym-dec" style="width:18px;height:18px"><span style="font-size:7px">D</span></div> Decisión</div>
+      </div>
+
+      <!-- Flow list -->
+      <div id="pfd_list" class="pfd-step-list">
+        <div style="text-align:center;padding:3rem;color:var(--text3);font-size:12px" id="pfd_empty">
+          No hay pasos en el diagrama. Presiona <strong style="color:var(--accent)">+ Agregar paso</strong> para comenzar.
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE 2: AMEF TABLE -->
+    <div class="page" id="page2">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1rem;flex-wrap:wrap;gap:8px">
+        <div>
+          <div class="page-title">Tabla AMEF</div>
+          <div class="page-sub" style="margin-bottom:0" id="table_sub">Selecciona una operación del diagrama para analizarla.</div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-ai" onclick="exportTXT()">↓ .txt</button>
+          <button class="btn btn-ai" onclick="exportCSV()">↓ .csv Excel</button>
+        </div>
+      </div>
+
+      <!-- Operations from PFD -->
+      <div id="ops_from_pfd" style="margin-bottom:1rem"></div>
+
+      <div class="amef-table-wrap">
+        <table class="amef-table">
+          <thead><tr>
+            <th style="min-width:60px">Op.</th>
+            <th style="min-width:140px">Paso de proceso</th>
+            <th style="min-width:130px">Modo de falla</th>
+            <th style="min-width:150px">Efectos + Crítico</th>
+            <th class="cell-sev" style="min-width:46px">SEV</th>
+            <th style="min-width:150px">Causa potencial</th>
+            <th class="cell-occ" style="min-width:46px">OCC</th>
+            <th style="min-width:110px">Prevención</th>
+            <th style="min-width:110px">Detección</th>
+            <th class="cell-det" style="min-width:46px">DET</th>
+            <th class="cell-rpn" style="min-width:70px">RPN</th>
+            <th style="min-width:120px">Acciones</th>
+            <th style="min-width:80px">Resp.</th>
+            <th class="cell-rpn" style="min-width:60px">RPN Res.</th>
+            <th class="cell-actions" style="min-width:60px">Acc.</th>
+          </tr></thead>
+          <tbody id="amef_tbody">
+            <tr><td colspan="15" style="text-align:center;padding:2rem;color:var(--text3);font-size:12px">
+              Selecciona una operación arriba para comenzar el análisis AMEF.
+            </td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ==================== STATE ====================
+let currentPage = 0;
+let pfdSteps = []; // Process Flow Diagram steps
+let rows = [];     // AMEF rows
+let modosTemp = [];
+let causasTemp = {};
+let currentPfdStep = null; // step being analyzed in AMEF modal
+let currentPfdStepIdx = -1;
+let editStepIdx = -1;
+let selectedStepType = '';
+
+// ==================== NAVIGATION ====================
+function goPage(n){
+  document.getElementById('page'+currentPage).classList.remove('active');
+  document.getElementById('page'+n).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach((b,i)=>{b.classList.remove('active');if(i===n)b.classList.add('active');});
+  currentPage=n;
+  if(n===1) renderPFD();
+  if(n===2) renderAmefPage();
+}
+
+function updateHeader(){
+  document.getElementById('header_ref').textContent=document.getElementById('pfmea_no').value||'Sin número de PFMEA';
+}
+
+// ==================== PFD ====================
+function openStepModal(idx){
+  editStepIdx = idx !== undefined ? idx : -1;
+  selectedStepType = '';
+  document.querySelectorAll('.step-type-btn').forEach(b=>b.classList.remove('sel'));
+  ['s_op_id','s_name','s_func','s_yes','s_no'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('dec_fields').style.display='none';
+  if(editStepIdx>=0){
+    const s=pfdSteps[editStepIdx];
+    selectStepType(s.type);
+    document.getElementById('s_op_id').value=s.op_id||'';
+    document.getElementById('s_name').value=s.name||'';
+    document.getElementById('s_func').value=s.func||'';
+    if(s.type==='dec'){
+      document.getElementById('s_yes').value=s.yes||'';
+      document.getElementById('s_no').value=s.no||'';
+    }
+    document.getElementById('step_modal_title').textContent='Editar paso';
+  } else {
+    document.getElementById('step_modal_title').textContent='Agregar paso al diagrama';
+  }
+  document.getElementById('step_modal').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+
+function closeStepModal(){
+  document.getElementById('step_modal').classList.remove('open');
+  document.body.style.overflow='';
+}
+
+function closeStepModalOutside(e){
+  if(e.target===document.getElementById('step_modal')) closeStepModal();
+}
+
+function selectStepType(t){
+  selectedStepType=t;
+  document.querySelectorAll('.step-type-btn').forEach(b=>b.classList.remove('sel'));
+  document.getElementById('stype_'+t).classList.add('sel');
+  document.getElementById('dec_fields').style.display=t==='dec'?'block':'none';
+}
+
+function saveStep(){
+  if(!selectedStepType){alert('Selecciona el tipo de paso.');return;}
+  const op_id=document.getElementById('s_op_id').value.trim();
+  const name=document.getElementById('s_name').value.trim();
+  if(!op_id||!name){alert('El ID y el nombre del paso son obligatorios.');return;}
+  const step={
+    type:selectedStepType, op_id, name,
+    func:document.getElementById('s_func').value.trim(),
+    yes:document.getElementById('s_yes').value.trim(),
+    no:document.getElementById('s_no').value.trim(),
+    analyzed:false
+  };
+  if(editStepIdx>=0){ pfdSteps[editStepIdx]=step; }
+  else { pfdSteps.push(step); }
+  renderPFD();
+  updateSidebarStats();
+  closeStepModal();
+  showToast(editStepIdx>=0?'Paso actualizado':'Paso agregado al diagrama');
+}
+
+function deleteStep(i){
+  if(confirm('¿Eliminar este paso del diagrama?')){
+    pfdSteps.splice(i,1);
+    renderPFD();
+    updateSidebarStats();
+  }
+}
+
+function symHTML(type){
+  if(type==='op')     return '<div class="sym-op">O</div>';
+  if(type==='insp')   return '<div class="sym-insp"><span>I</span></div>';
+  if(type==='transp') return '<div class="sym-transp">T</div>';
+  if(type==='store')  return '<div style="position:relative;width:36px;height:28px"><div style="width:0;height:0;border-left:18px solid transparent;border-right:18px solid transparent;border-top:28px solid var(--border2)"></div><div style="position:absolute;top:4px;left:50%;transform:translateX(-50%);font-size:9px;color:var(--text3);font-family:var(--mono)">S</div></div>';
+  if(type==='dec')    return '<div class="sym-dec"><span>D</span></div>';
+  if(type==='start')  return '<div class="sym-start">INI</div>';
+  if(type==='end')    return '<div class="sym-end">FIN</div>';
+  return '';
+}
+
+function typeLabel(t){
+  return {op:'Operación',insp:'Inspección',transp:'Transporte',store:'Almacenamiento',dec:'Decisión'}[t]||t;
+}
+
+function renderPFD(){
+  const list=document.getElementById('pfd_list');
+  const empty=document.getElementById('pfd_empty');
+  if(pfdSteps.length===0){
+    list.innerHTML='';
+    list.appendChild(empty||document.createElement('div'));
+    if(empty) empty.style.display='';
+    return;
+  }
+  list.innerHTML='';
+
+  // Start symbol
+  list.appendChild(makeConnectorRow('start','',true));
+
+  pfdSteps.forEach((s,i)=>{
+    list.appendChild(makeConnectorRow(s.type, i, i===0, i===pfdSteps.length-1, s));
+    // Decision branches
+    if(s.type==='dec'){
+      const branches=document.createElement('div');
+      branches.className='decision-branches';
+      branches.innerHTML=`
+        <div class="decision-branch yes">✓ SÍ → ${s.yes||'Siguiente paso'}</div>
+        <div class="decision-branch no">✗ NO → ${s.no||'Retrabajo / Scrap'}</div>
+      `;
+      list.appendChild(branches);
+    }
+  });
+
+  // End symbol
+  list.appendChild(makeConnectorRow('end','',false,true));
+}
+
+function makeConnectorRow(type, idx, isFirst, isLast, step){
+  const row=document.createElement('div');
+  row.className='pfd-step-card';
+
+  const connector=document.createElement('div');
+  connector.className='connector';
+  connector.innerHTML=`
+    <div class="line top" style="${isFirst?'background:transparent':''}">&nbsp;</div>
+    <div class="sym">${symHTML(type)}</div>
+    <div class="line bottom" style="${isLast?'background:transparent':''}">&nbsp;</div>
+  `;
+  row.appendChild(connector);
+
+  if(type==='start'||type==='end') return row;
+
+  const content=document.createElement('div');
+  content.className='content'+(step&&step.analyzed?' selected':'');
+  const opInfo = step.type==='op'?`<div style="margin-top:3px;font-size:10px;color:var(--text3)">Función: ${step.func||'—'}</div>`:'';
+  const analyzedBadge = step.analyzed?'<span class="badge blow">✓ Analizado</span>':'';
+  const isOp = step.type==='op'||step.type==='insp';
+
+  content.innerHTML=`
+    <div class="step-header">
+      <div style="display:flex;align-items:center;gap:6px">
+        <span class="step-id">${step.op_id}</span>
+        <span class="step-type">${typeLabel(step.type)}</span>
+        ${analyzedBadge}
+      </div>
+      <div style="display:flex;gap:4px">
+        ${isOp?(step.analyzed?`<button class="btn btn-green" style="padding:3px 8px;font-size:10px" onclick="openAmefForStep(${idx})">✎ Editar en PFMEA</button>`:`<button class="btn btn-ai" style="padding:3px 8px;font-size:10px" onclick="openAmefForStep(${idx})">⊕ Analizar en PFMEA</button>`):''}
+        <button class="btn" style="padding:3px 7px;font-size:10px" onclick="openStepModal(${idx})">✎</button>
+        <button class="btn btn-danger" style="padding:3px 6px" onclick="deleteStep(${idx})">×</button>
+      </div>
+    </div>
+    <div class="step-name">${step.name}</div>
+    ${opInfo}
+  `;
+  row.appendChild(content);
+  return row;
+}
+
+// ==================== AMEF MODAL (per PFD step) ====================
+function openAmefForStep(idx){
+  currentPfdStep = pfdSteps[idx];
+  currentPfdStepIdx = idx;
+  modosTemp=[];
+  causasTemp={};
+
+  // If already analyzed, load existing rows into modosTemp/causasTemp
+  const existingRows = rows.filter(r => r.op_id === currentPfdStep.op_id && r.proc_step === currentPfdStep.name);
+  if(existingRows.length > 0){
+    // Rebuild modosTemp and causasTemp from existing rows
+    existingRows.forEach(r => {
+      let mi = modosTemp.findIndex(m => m.modo === r.failure_mode);
+      if(mi < 0){
+        mi = modosTemp.length;
+        modosTemp.push({modo: r.failure_mode, efectos: r.failure_effect, efecto_critico: r.efecto_critico||'', sev: r.sev});
+        causasTemp[mi] = [];
+      }
+      causasTemp[mi].push({
+        causa: r.failure_cause, ctrl_prev: r.ctrl_prev, ctrl_det: r.ctrl_det,
+        occ: r.occ, det: r.det, rpn: r.rpn,
+        acciones: r.rec_actions, resp: r.resp, taken: r.taken
+      });
+    });
+    document.getElementById('amef_modal_sub').textContent = '✎ Editando — ' + existingRows.length + ' renglón(es) existentes. Puedes agregar modos, causas o modificar datos.';
+  } else {
+    document.getElementById('amef_modal_sub').textContent = 'Función: '+(currentPfdStep.func||'—');
+  }
+
+  document.getElementById('amef_modal_title').textContent='PFMEA — '+currentPfdStep.op_id+': '+currentPfdStep.name;
+  document.getElementById('e1_modo_manual').value='';
+  document.getElementById('modos_list').innerHTML='';
+  // ai panels removed
+  goEtapa1Internal();
+  document.getElementById('amef_modal').classList.add('open');
+  document.body.style.overflow='hidden';
+  // Render after modal is visible so DOM elements exist
+  setTimeout(()=>{ renderModosList(); }, 50);
+}
+
+function closeAmefModal(){
+  document.getElementById('amef_modal').classList.remove('open');
+  document.body.style.overflow='';
+}
+
+function confirmCloseAmefModal(){
+  if(modosTemp.length>0){
+    if(confirm('¿Cerrar sin guardar? Se perderán los datos no guardados en este modal.')){
+      closeAmefModal();
+    }
+  } else {
+    closeAmefModal();
+  }
+}
+
+function closeAmefModalOutside(e){
+  if(e.target===document.getElementById('amef_modal')){
+    if(modosTemp.length>0){
+      if(confirm('¿Cerrar sin guardar? Se perderán los datos no guardados en este modal.')){
+        closeAmefModal();
+      }
+    } else {
+      closeAmefModal();
+    }
+  }
+}
+
+function goEtapa1Internal(){
+  document.getElementById('etapa1').classList.add('active');
+  document.getElementById('etapa2').classList.remove('active');
+  document.getElementById('ps1').className='progress-step active';
+  document.getElementById('ps2').className='progress-step';
+  document.getElementById('pl1').className='progress-label active';
+  document.getElementById('pl2').className='progress-label';
+}
+
+function goEtapa1Back(){ goEtapa1Internal(); }
+
+function goEtapa2(){
+  if(modosTemp.length===0){alert('Agrega al menos un modo de falla.');return;}
+  buildEtapa2();
+  document.getElementById('etapa1').classList.remove('active');
+  document.getElementById('etapa2').classList.add('active');
+  document.getElementById('ps1').className='progress-step done';
+  document.getElementById('ps2').className='progress-step active';
+  document.getElementById('pl1').className='progress-label';
+  document.getElementById('pl2').className='progress-label active';
+}
+
+function buildEtapa2(){
+  const container=document.getElementById('modos_causas_container');
+  container.innerHTML='';
+  modosTemp.forEach((m,mi)=>{
+    if(!causasTemp[mi]) causasTemp[mi]=[];
+    const sec=document.createElement('div');
+    sec.style.cssText='background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem;margin-bottom:1rem';
+    sec.id='modo_section_'+mi;
+    sec.innerHTML=`
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.875rem">
+        <div>
+          <div style="font-size:13px;font-weight:500;color:var(--accent)">${m.modo}</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:2px">SEV: ${m.sev||'—'} · Efecto crítico: ${m.efecto_critico||'—'}</div>
+        </div>
+        <span style="font-family:var(--mono);font-size:10px;color:var(--text3)">Modo #${mi+1}</span>
+      </div>
+      <div id="causas_saved_${mi}"></div>
+      <div id="causa_form_${mi}" style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;margin-top:.5rem">
+        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.75rem">Causa #<span id="causa_num_${mi}">${causasTemp[mi].length+1}</span></div>
+        <div class="field">
+          <div class="fl">Causa potencial <span class="req">*</span></div>
+          <textarea id="causa_txt_${mi}" rows="2" placeholder="Ej: Operador sin entrenamiento en posicionamiento correcto del filtro"></textarea>
+        </div>
+
+        <div class="field" style="margin-top:.75rem">
+          <div class="fl">Ocurrencia (OCC) <span class="req">*</span> <span class="hint">— ¿Qué tan probable es que ocurra esta causa?</span></div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input type="text" id="occ_${mi}" readonly placeholder="— Selecciona en la tabla —" style="flex:1;background:var(--bg3);cursor:pointer" onclick="openTm('occ','occ_${mi}','setOccDet',${mi},'occ')">
+            <button class="btn btn-ai" style="white-space:nowrap;padding:5px 8px" onclick="openTm('occ','occ_${mi}','setOccDet',${mi},'occ')">📋 Tabla OCC</button>
+          </div>
+          <div id="occ_display_${mi}" style="font-size:11px;color:var(--text2);margin-top:4px"></div>
+        </div>
+        <div class="g2" style="margin-top:.5rem">
+          <div class="field"><div class="fl">Controles de PREVENCIÓN <span class="hint">— ¿Qué evita que ocurra la causa?</span></div><textarea id="ctrl_prev_${mi}" rows="2" placeholder="Ej: PRT0002735 FILTRO"></textarea></div>
+          <div class="field"><div class="fl">Controles de DETECCIÓN <span class="hint">— ¿Qué detecta el modo de falla?</span></div><textarea id="ctrl_det_${mi}" rows="2" placeholder="Ej: QAF-185 QCIP"></textarea></div>
+        </div>
+
+        <div class="field" style="margin-top:.75rem">
+          <div class="fl">Detección (DET) <span class="req">*</span> <span class="hint">— ¿Qué tan bien detectan los controles actuales?</span></div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input type="text" id="det_${mi}" readonly placeholder="— Selecciona en la tabla —" style="flex:1;background:var(--bg3);cursor:pointer" onclick="openTm('det','det_${mi}','setOccDet',${mi},'det')">
+            <button class="btn btn-ai" style="white-space:nowrap;padding:5px 8px" onclick="openTm('det','det_${mi}','setOccDet',${mi},'det')">📋 Tabla DET</button>
+          </div>
+          <div id="det_display_${mi}" style="font-size:11px;color:var(--text2);margin-top:4px"></div>
+        </div>
+        <div id="rpn_inline_${mi}" style="font-size:12px;color:var(--text2);margin:.5rem 0;min-height:20px"></div>
+        <div class="field"><div class="fl">Acciones recomendadas</div><textarea id="acciones_${mi}" rows="2" placeholder="Ej: Instalar sensor inductivo en prensa"></textarea></div>
+
+        <div class="g2" style="margin-top:.75rem">
+          <div class="field"><div class="fl">Responsable y fecha</div><input type="text" id="resp_${mi}" placeholder="Ej: Ing. Rocha — 30/Jun/2025"></div>
+          <div class="field"><div class="fl">Acciones tomadas</div><input type="text" id="taken_${mi}" placeholder="Ej: Se instaló sensor el 15/May"></div>
+        </div>
+        <div class="btn-row" style="margin-top:.875rem">
+          <button class="btn btn-green" onclick="saveCausa(${mi})">✓ Guardar causa</button>
+        </div>
+      </div>
+    `;
+    container.appendChild(sec);
+    // Render already-saved causas for this modo
+    if(causasTemp[mi] && causasTemp[mi].length > 0){
+      renderCausasSaved(mi);
+      document.getElementById('causa_num_'+mi).textContent = causasTemp[mi].length + 1;
+    }
+  });
+}
+
+// ==================== MODOS TEMP ====================
+function addModo(modo){
+  if(modosTemp.find(m=>m.modo===modo)) return;
+  modosTemp.push({modo,efectos:'',efecto_critico:'',sev:0});
+  renderModosList();
+}
+
+function addModoManual(){
+  const val=document.getElementById('e1_modo_manual').value.trim();
+  if(!val) return;
+  addModo(val);
+  document.getElementById('e1_modo_manual').value='';
+}
+
+function removeModoTemp(mi){
+  modosTemp.splice(mi,1);
+  renderModosList();
+}
+
+function renderModosList(){
+  const container=document.getElementById('modos_list');
+  container.innerHTML='';
+  modosTemp.forEach((m,mi)=>{
+    const div=document.createElement('div');
+    div.className='modo-card';
+    // Pre-restore sev display value
+    const sevDisplayVal = m.sev ? (m.sev + ' — ' + sevLabel(m.sev)) : '';
+    div.innerHTML=`
+      <div class="modo-card-header">
+        <span style="font-size:13px;font-weight:500">${mi+1}. ${m.modo}</span>
+        <button class="btn btn-danger" onclick="removeModoTemp(${mi})">× Quitar</button>
+      </div>
+      <div class="g2">
+        <div>
+          <div class="field">
+            <div class="fl">Efecto(s) potencial(es) <span class="hint">— Todos, uno por línea</span></div>
+            <textarea rows="2" id="m_efecto_${mi}" placeholder="Ej: Rack incompleto, producto no utilizable" onchange="updateModoEfecto(${mi})">${m.efectos}</textarea>
+          </div>
+
+          <div class="field" style="margin-top:.5rem">
+            <div class="fl">Efecto crítico <span class="req">*</span> <span class="hint">— El más grave, define la SEV</span></div>
+            <div style="display:flex;gap:6px;align-items:center">
+              <input type="text" id="m_efecto_critico_${mi}" placeholder="Ej: Rechazo del producto por especificaciones fuera de norma" onchange="updateModoEfectoCritico(${mi})" value="${m.efecto_critico||''}">
+            </div>
+
+          </div>
+        </div>
+        <div class="field">
+          <div class="fl">Severidad (SEV) <span class="req">*</span> <span class="hint">— Del efecto crítico</span></div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input type="text" id="m_sev_${mi}" readonly placeholder="— Ver tabla SEV —" style="flex:1;background:var(--bg3);cursor:pointer" onclick="openTm('sev','m_sev_${mi}','updateModoSevById',${mi})" value="${sevDisplayVal}">
+            <button class="btn btn-ai" style="white-space:nowrap" onclick="openTm('sev','m_sev_${mi}','updateModoSevById',${mi})">📋 Tabla SEV</button>
+          </div>
+          <div id="m_sev_display_${mi}" style="font-size:11px;color:var(--text2);margin-top:4px">${m.sev?'<span style=\"color:var(--accent)\">SEV '+m.sev+' — '+sevLabel(m.sev)+' seleccionado</span>':''}</div>
+        </div>
+      </div>
+    `;
+    container.appendChild(div);
+    if(document.getElementById('m_sev_'+mi)) document.getElementById('m_sev_'+mi).value=m.sev?(m.sev+' — '+sevLabel(m.sev)):'';
+  });
+}
+
+function updateModoEfecto(mi){ modosTemp[mi].efectos=document.getElementById('m_efecto_'+mi).value; }
+function updateModoEfectoCritico(mi){ modosTemp[mi].efecto_critico=document.getElementById('m_efecto_critico_'+mi).value; }
+
+// ==================== CAUSA SAVE ====================
+function saveCausa(mi){
+  const causa=document.getElementById('causa_txt_'+mi).value.trim();
+  const occEl=document.getElementById('occ_'+mi);
+  const detEl=document.getElementById('det_'+mi);
+  const occ=parseInt(occEl?(occEl.dataset.val||occEl.value):0)||0;
+  const det=parseInt(detEl?(detEl.dataset.val||detEl.value):0)||0;
+  const sev=modosTemp[mi].sev;
+  if(!causa){alert('Escribe la causa potencial.');return;}
+  if(!occ||!det){alert('Selecciona OCC y DET.');return;}
+  causasTemp[mi].push({
+    causa,
+    ctrl_prev:document.getElementById('ctrl_prev_'+mi).value,
+    ctrl_det:document.getElementById('ctrl_det_'+mi).value,
+    occ,det,rpn:sev*occ*det,
+    acciones:document.getElementById('acciones_'+mi).value,
+    resp:document.getElementById('resp_'+mi).value,
+    taken:document.getElementById('taken_'+mi).value
+  });
+  renderCausasSaved(mi);
+  ['causa_txt_','ctrl_prev_','ctrl_det_','acciones_','resp_','taken_'].forEach(p=>{const el=document.getElementById(p+mi);if(el)el.value='';});
+  ['occ_','det_'].forEach(p=>{const el=document.getElementById(p+mi);if(el){el.value='';el.dataset.val='';}});
+  document.getElementById('rpn_inline_'+mi).innerHTML='';
+  // ai panels removed
+  document.getElementById('causa_num_'+mi).textContent=causasTemp[mi].length+1;
+  showToast('Causa #'+causasTemp[mi].length+' guardada');
+}
+
+function renderCausasSaved(mi){
+  const container=document.getElementById('causas_saved_'+mi);
+  container.innerHTML='';
+  causasTemp[mi].forEach((c,ci)=>{
+    const div=document.createElement('div');
+    div.className='causa-saved';
+    const label=c.rpn>=100?'Alto':c.rpn>=40?'Medio':'Bajo';
+    const cls=c.rpn>=100?'high':c.rpn>=40?'med':'low';
+    div.innerHTML=`
+      <div class="causa-saved-header">
+        <span class="causa-saved-tag">Causa #${ci+1}</span>
+        <div style="display:flex;gap:6px;align-items:center">
+          <span class="badge b${cls}">RPN ${c.rpn} — ${label}</span>
+          <button class="btn" style="padding:2px 8px;font-size:10px" onclick="editCausa(${mi},${ci})">✎ Editar</button>
+          <button class="btn btn-danger" style="padding:2px 6px;font-size:10px" onclick="deleteCausa(${mi},${ci})">×</button>
+        </div>
+      </div>
+      <div style="font-size:12px;color:var(--text)">${c.causa}</div>
+      <div style="font-size:10px;color:var(--text3);margin-top:3px">OCC:${c.occ} · DET:${c.det} · Prev: ${c.ctrl_prev||'—'} · Det: ${c.ctrl_det||'—'}</div>
+      ${c.acciones?'<div style="font-size:10px;color:var(--text3);margin-top:2px">Acciones: '+c.acciones+'</div>':''}
+    `;
+    container.appendChild(div);
+  });
+}
+
+function editCausa(mi, ci){
+  // Load causa data back into the form for editing
+  const c = causasTemp[mi][ci];
+  // Remove from array temporarily
+  causasTemp[mi].splice(ci, 1);
+  renderCausasSaved(mi);
+  // Fill form fields
+  const txtEl = document.getElementById('causa_txt_'+mi);
+  const occEl = document.getElementById('occ_'+mi);
+  const detEl = document.getElementById('det_'+mi);
+  const prevEl = document.getElementById('ctrl_prev_'+mi);
+  const detTxtEl = document.getElementById('ctrl_det_'+mi);
+  const accEl = document.getElementById('acciones_'+mi);
+  const respEl = document.getElementById('resp_'+mi);
+  const takenEl = document.getElementById('taken_'+mi);
+  if(txtEl) txtEl.value = c.causa;
+  if(occEl){ occEl.value = c.occ+' — '+occLabel(c.occ); occEl.dataset.val = c.occ; }
+  if(detEl){ detEl.value = c.det+' — '+detLabel(c.det); detEl.dataset.val = c.det; }
+  if(prevEl) prevEl.value = c.ctrl_prev||'';
+  if(detTxtEl) detTxtEl.value = c.ctrl_det||'';
+  if(accEl) accEl.value = c.acciones||'';
+  if(respEl) respEl.value = c.resp||'';
+  if(takenEl) takenEl.value = c.taken||'';
+  // Update displays
+  const occDisp = document.getElementById('occ_display_'+mi);
+  const detDisp = document.getElementById('det_display_'+mi);
+  if(occDisp) occDisp.innerHTML='<span style="color:var(--accent);font-weight:500">OCC '+c.occ+' cargado para edición</span>';
+  if(detDisp) detDisp.innerHTML='<span style="color:var(--accent);font-weight:500">DET '+c.det+' cargado para edición</span>';
+  calcRPNInline(mi);
+  document.getElementById('causa_num_'+mi).textContent = causasTemp[mi].length+1;
+  // Scroll to form
+  const form = document.getElementById('causa_form_'+mi);
+  if(form) form.scrollIntoView({behavior:'smooth', block:'nearest'});
+  showToast('Causa cargada para edición — modifica y presiona Guardar causa');
+}
+
+function deleteCausa(mi, ci){
+  if(confirm('¿Eliminar esta causa?')){
+    causasTemp[mi].splice(ci, 1);
+    renderCausasSaved(mi);
+    document.getElementById('causa_num_'+mi).textContent = causasTemp[mi].length+1;
+    showToast('Causa eliminada');
+  }
+}
+
+function occLabel(v){
+  const m={10:'Muy alta',9:'Alta',8:'Alta',7:'Alta',6:'Moderada',5:'Moderada',4:'Moderada',3:'Baja',2:'Baja',1:'Muy baja'};
+  return m[v]||v;
+}
+function detLabel(v){
+  const m={10:'Casi imposible',9:'Muy remota',8:'Remota',7:'Muy baja',6:'Baja',5:'Moderada',4:'Mod. alta',3:'Alta',2:'Muy alta',1:'Casi seguro'};
+  return m[v]||v;
+}
+
+function saveAllRows(){
+  let valid=true;
+  modosTemp.forEach((m,mi)=>{
+    if(!causasTemp[mi]||causasTemp[mi].length===0){
+      alert('El modo "'+m.modo+'" no tiene causas.');valid=false;
+    }
+  });
+  if(!valid) return;
+
+  // Remove existing rows for this step (replace, not append)
+  rows = rows.filter(r => !(r.op_id===currentPfdStep.op_id && r.proc_step===currentPfdStep.name));
+
+  // Add all new/updated rows
+  modosTemp.forEach((m,mi)=>{
+    causasTemp[mi].forEach(c=>{
+      rows.push({
+        op_id:currentPfdStep.op_id, proc_step:currentPfdStep.name, proc_func:currentPfdStep.func,
+        failure_mode:m.modo, failure_effect:m.efectos, efecto_critico:m.efecto_critico||'', sev:m.sev,
+        failure_cause:c.causa, occ:c.occ,
+        ctrl_prev:c.ctrl_prev, ctrl_det:c.ctrl_det, det:c.det, rpn:c.rpn,
+        rec_actions:c.acciones, resp:c.resp, taken:c.taken, res_rpn:0
+      });
+    });
+  });
+
+  // Mark step as analyzed
+  const idx=pfdSteps.findIndex(s=>s.op_id===currentPfdStep.op_id);
+  if(idx>=0) pfdSteps[idx].analyzed=true;
+  renderPFD();
+  renderAmefPage();
+  updateSidebarStats();
+  closeAmefModal();
+  const totalNew=modosTemp.reduce((a,m,mi)=>a+(causasTemp[mi]?causasTemp[mi].length:0),0);
+  showToast(totalNew+' renglones actualizados en la tabla AMEF');
+}
+
+// ==================== AMEF PAGE ====================
+function renderAmefPage(){
+  // Show ops buttons
+  const ops=pfdSteps.filter(s=>s.type==='op'||s.type==='insp');
+  const container=document.getElementById('ops_from_pfd');
+  if(ops.length===0){
+    container.innerHTML='<div style="font-size:12px;color:var(--text3);padding:.75rem;background:var(--bg3);border-radius:var(--radius);border:1px solid var(--border)">Aún no hay operaciones en el diagrama de flujo. <button class="btn btn-ai" style="margin-left:8px" onclick="goPage(1)">Ir al diagrama →</button></div>';
+  } else {
+    container.innerHTML='<div style="font-size:11px;color:var(--text2);margin-bottom:.5rem">Operaciones del diagrama — haz clic para analizar en el PFMEA:</div><div style="display:flex;gap:6px;flex-wrap:wrap">';
+    ops.forEach((s,idx)=>{
+      const realIdx=pfdSteps.indexOf(s);
+      const analyzed=s.analyzed?'<span class="badge blow" style="margin-left:4px">✓</span>':'';
+      container.innerHTML+=`<button class="btn ${s.analyzed?'btn-green':'btn-ai'}" onclick="openAmefForStep(${realIdx})">${s.op_id} — ${s.name}${analyzed}</button>`;
+    });
+    container.innerHTML+='</div>';
+  }
+  renderTable();
+  const pfmea=document.getElementById('pfmea_no').value||'Sin número';
+  const prod=document.getElementById('product').value||'Sin producto';
+  document.getElementById('table_sub').innerHTML=`<strong>${pfmea}</strong> · ${prod} · <strong>${rows.length}</strong> renglón(es)`;
+}
+
+function renderTable(){
+  const tbody=document.getElementById('amef_tbody');
+  if(rows.length===0){
+    tbody.innerHTML='<tr><td colspan="15" style="text-align:center;padding:2rem;color:var(--text3);font-size:12px">Selecciona una operación arriba para comenzar el análisis AMEF.</td></tr>';
+    return;
+  }
+  tbody.innerHTML='';
+  let lastMode='';
+  rows.forEach((r,i)=>{
+    const isRepeat=(r.failure_mode===lastMode);
+    lastMode=r.failure_mode;
+    const tr=document.createElement('tr');
+    if(isRepeat) tr.className='row-repeat';
+    const rpnCls=rc(r.rpn);
+    const modeCell=isRepeat?`<span style="color:var(--text3);font-size:10px">↳ ${r.failure_mode}</span>`:r.failure_mode;
+    const effectContent=isRepeat?'<span style="color:var(--text3);font-size:10px">—</span>':(r.failure_effect+(r.efecto_critico?'<div style="margin-top:3px;font-size:10px;color:var(--red);font-weight:500">⚠ '+r.efecto_critico+'</div>':''));
+    const sevCell=isRepeat?'<span style="color:var(--text3)">—</span>':r.sev;
+    const escAlert=r.rpn>103?'<div style="font-size:9px;color:#ff6b6b;font-weight:500;margin-top:2px">⚠ Escalar</div>':'';
+    tr.innerHTML=`
+      <td><div class="td-inner"><span class="op-tag">${r.op_id||'—'}</span></div></td>
+      <td><div class="td-inner" style="font-size:11px;color:var(--text2)">${r.proc_step||'—'}</div></td>
+      <td class="td-modo"><div class="td-inner" style="font-weight:500;font-size:11px">${modeCell}</div></td>
+      <td class="td-efecto"><div class="td-inner" style="font-size:10px;color:var(--text2)">${effectContent}</div></td>
+      <td class="cell-sev td-sev"><div class="td-inner">${sevCell}</div></td>
+      <td><div class="td-inner" style="font-size:11px">${r.failure_cause||'—'}</div></td>
+      <td class="cell-occ"><div class="td-inner">${r.occ||'—'}</div></td>
+      <td><div class="td-inner" style="font-size:10px;color:var(--text2)">${r.ctrl_prev||'—'}</div></td>
+      <td><div class="td-inner" style="font-size:10px;color:var(--text2)">${r.ctrl_det||'—'}</div></td>
+      <td class="cell-det"><div class="td-inner">${r.det||'—'}</div></td>
+      <td class="cell-rpn"><div class="td-inner"><span class="badge b${rpnCls}">${r.rpn}</span>${escAlert}</div></td>
+      <td><div class="td-inner" style="font-size:10px;color:var(--text2)">${r.rec_actions||'—'}</div></td>
+      <td><div class="td-inner" style="font-size:10px;color:var(--text2)">${r.resp||'—'}</div></td>
+      <td class="cell-rpn"><div class="td-inner">${r.res_rpn>0?`<span class="badge b${rc(r.res_rpn)}">${r.res_rpn}</span>`:'—'}</div></td>
+      <td class="cell-actions"><div class="td-inner" style="display:flex;gap:3px;justify-content:center">
+        <button class="btn btn-danger" style="padding:3px 6px" onclick="deleteRow(${i})">×</button>
+      </div></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function deleteRow(i){if(confirm('¿Eliminar?')){rows.splice(i,1);renderTable();updateSidebarStats();}}
+
+function updateSidebarStats(){
+  document.getElementById('sb_steps').textContent=pfdSteps.length;
+  document.getElementById('sb_rows').textContent=rows.length;
+  document.getElementById('sb_high').textContent=rows.filter(r=>r.rpn>=100).length;
+}
+
+// ==================== RPN ====================
+function calcRPNInline(mi){
+  const sev=modosTemp[mi]?modosTemp[mi].sev:0;
+  const occEl=document.getElementById('occ_'+mi);
+  const detEl=document.getElementById('det_'+mi);
+  const occ=parseInt(occEl?(occEl.dataset.val||occEl.value):0)||0;
+  const det=parseInt(detEl?(detEl.dataset.val||detEl.value):0)||0;
+  const rpn=sev*occ*det;
+  const el=document.getElementById('rpn_inline_'+mi);
+  if(rpn>0){
+    const label=rpn>=100?'Alto':rpn>=40?'Medio':'Bajo';
+    const cls=rpn>=100?'high':rpn>=40?'med':'low';
+    const esc=rpn>103?'<span style="display:inline-block;margin-left:8px;background:#7B0000;color:#fff;font-size:10px;padding:2px 8px;border-radius:4px;font-weight:500">⚠ RPN > 103 — Escalar a ingeniería</span>':'';
+    if(el) el.innerHTML='RPN: <strong style="font-family:var(--mono)">'+rpn+'</strong> &nbsp;<span class="badge b'+cls+'">'+label+'</span>'+esc;
+  } else {
+    if(el) el.innerHTML='Selecciona OCC y DET para ver el RPN.';
+  }
+}
+
+function rl(rpn){return rpn>103?'Escalar':rpn>=100?'Alto':rpn>=40?'Medio':'Bajo';}
+function rc(rpn){return rpn>=100?'high':rpn>=40?'med':'low';}
+function sevLabel(v){const m={10:'Peligroso sin aviso',9:'Peligroso con aviso',8:'Muy alto',7:'Alto',6:'Moderado',5:'Bajo',4:'Muy bajo',3:'Menor',2:'Muy menor',1:'Ninguno'};return m[v]||'';}
+
+// ==================== AI ====================
+
+
+
+
+
+
+
+
+// ==================== TABLA MODAL ====================
+let _tmFieldId=null,_tmMi=null,_tmType=null,_tmCb=null;
+
+function openTm(type,fieldId,cbName,mi,subtype){
+  _tmFieldId=fieldId;_tmMi=mi;_tmType=subtype||type;_tmCb=cbName;
+  const title=document.getElementById('tm_title');
+  const sub=document.getElementById('tm_sub');
+  const body=document.getElementById('tm_body');
+  if(type==='sev'){title.textContent='Tabla de Severidad (SEV)';sub.textContent='Evalúa el efecto sobre el cliente Y sobre el proceso. Haz clic en el nivel MÁS ALTO de los dos.';body.innerHTML=buildSevTable();}
+  else if(type==='occ'){title.textContent='Tabla de Ocurrencia (OCC)';sub.textContent='Usa la columna que aplique: por cantidad de scrap/ppm O por frecuencia de tiempo.';body.innerHTML=buildOccTable();}
+  else if(type==='det'){title.textContent='Tabla de Detección (DET)';sub.textContent='Identifica el tipo de control que tienes actualmente.';body.innerHTML=buildDetTable();}
+  document.getElementById('tm_overlay').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+
+function closeTm(){document.getElementById('tm_overlay').classList.remove('open');document.body.style.overflow='';}
+function closeTmOutside(e){if(e.target===document.getElementById('tm_overlay'))closeTm();}
+
+function selectTmRow(val,label){
+  const el=document.getElementById(_tmFieldId);
+  if(el){el.value=val+' — '+label;el.dataset.val=val;}
+  if(_tmCb==='updateModoSevById'){
+    modosTemp[_tmMi].sev=parseInt(val);
+    const disp=document.getElementById('m_sev_display_'+_tmMi);
+    if(disp)disp.innerHTML='<span style="color:var(--accent);font-weight:500">SEV '+val+' — '+label+' seleccionado</span>';
+  } else if(_tmCb==='setOccDet'){
+    calcRPNInline(_tmMi);
+    const dispId=_tmType==='occ'?'occ_display_'+_tmMi:'det_display_'+_tmMi;
+    const disp=document.getElementById(dispId);
+    const lbl=_tmType==='occ'?'OCC':'DET';
+    if(disp)disp.innerHTML='<span style="color:var(--accent);font-weight:500">'+lbl+' '+val+' — '+label+' seleccionado</span>';
+  }
+  closeTm();
+}
+
+function buildSevTable(){
+  const rows=[
+    {n:10,nivel:'Peligroso sin aviso',cliente:'Afecta la operación segura del producto y/o incumplimiento de regulaciones de gobierno SIN aviso.',proceso:'Afecta al operador, planta o personal de mantenimiento. No cumple regulaciones gubernamentales, sin aviso.',c:'tm-high'},
+    {n:9, nivel:'Peligroso con aviso',cliente:'Afecta la operación segura del producto y/o incumplimiento de regulaciones de gobierno CON aviso.',proceso:'Afecta al cliente, operador, planta o personal de mantenimiento. No cumple regulaciones gubernamentales con aviso.',c:'tm-high'},
+    {n:8, nivel:'Muy alto',cliente:'Pérdida de función primaria — producto inoperable, no afecta la operación segura.',proceso:'Tiempo muerto de más de 8 horas o producción de partes defectuosas por más de 4 horas.',c:'tm-high'},
+    {n:7, nivel:'Alto',cliente:'Degradación de función primaria — producto operable pero a nivel reducido de desempeño.',proceso:'Tiempo muerto entre 4 y 8 horas o producción de partes defectuosas entre 3 y 4 horas.',c:'tm-high'},
+    {n:6, nivel:'Moderado',cliente:'Pérdida de función secundaria — producto operable pero funciones de comodidad inoperables.',proceso:'Tiempo muerto entre 1 y 4 horas o producción de partes defectuosas entre 1 y 3 horas.',c:'tm-med'},
+    {n:5, nivel:'Bajo',cliente:'Degradación de función secundaria — producto operable pero funciones de comodidad a nivel reducido.',proceso:'Tiempo muerto entre 30 min y 1 hora o producción de partes defectuosas hasta una hora.',c:'tm-med'},
+    {n:4, nivel:'Muy bajo',cliente:'Apariencia no conforme, producto operable, percibido por la mayoría de los clientes (>75%).',proceso:'Tiempo muerto entre 10 y 30 minutos, sin producción de partes defectuosas.',c:'tm-med'},
+    {n:3, nivel:'Menor',cliente:'Apariencia no conforme, producto operable, percibido por muchos clientes (50%).',proceso:'Tiempo muerto de hasta 10 minutos, sin producción de partes defectuosas.',c:'tm-low'},
+    {n:2, nivel:'Muy menor',cliente:'Apariencia no conforme, producto operable, percibido por clientes exigentes (<25%).',proceso:'Variabilidad de parámetros fuera de límites. Ajuste u otros controles de proceso requeridos. No hay tiempo muerto ni producto defectuoso.',c:'tm-low'},
+    {n:1, nivel:'Ninguno',cliente:'Sin efecto discernible.',proceso:'Variabilidad de parámetros dentro de límites de especificación.',c:'tm-low'},
+  ];
+  let h='<div class="tm-sec"><strong>Instrucción:</strong> Evalúa ambas columnas. Haz clic en el renglón del nivel MÁS ALTO de los dos.</div>';
+  h+='<table class="tm-table"><thead><tr><th style="width:44px">SEV</th><th style="width:110px">Nivel</th><th>Criterio — Efecto en el CLIENTE</th><th>Criterio — Efecto en el PROCESO</th></tr></thead><tbody>';
+  rows.forEach(r=>{h+='<tr class="tm-sel" onclick="selectTmRow('+r.n+',\''+r.nivel+'\')"><td class="tm-n '+r.c+'">'+r.n+'</td><td class="tm-lvl '+r.c+'">'+r.nivel+'</td><td>'+r.cliente+'</td><td>'+r.proceso+'</td></tr>';});
+  h+='</tbody></table>';return h;
+}
+
+function buildOccTable(){
+  const rows=[
+    {n:10,pos:'Muy alta',cant:'≥100 por mil  |  ≥1 en 10',tiempo:'Todo el tiempo',ppm:'100,000',c:'tm-high'},
+    {n:9, pos:'Alta',    cant:'50 por mil  |  1 en 20',   tiempo:'Casi siempre',  ppm:'50,000', c:'tm-high'},
+    {n:8, pos:'Alta',    cant:'20 por mil  |  1 en 50',   tiempo:'Más de una vez por turno',ppm:'20,000',c:'tm-high'},
+    {n:7, pos:'Alta',    cant:'10 por mil  |  1 en 100',  tiempo:'Más de una vez al día',  ppm:'10,000',c:'tm-high'},
+    {n:6, pos:'Moderada',cant:'2 por mil  |  1 en 500',   tiempo:'Más de una vez por semana',ppm:'2,000',c:'tm-med'},
+    {n:5, pos:'Moderada',cant:'0.5 por mil  |  1 en 2,000',tiempo:'Más de una vez al mes', ppm:'500',  c:'tm-med'},
+    {n:4, pos:'Moderada',cant:'0.1 por mil  |  1 en 10,000',tiempo:'Más de una vez al año',ppm:'100', c:'tm-med'},
+    {n:3, pos:'Baja',    cant:'0.01 por mil  |  1 en 100,000',tiempo:'Una vez al año',      ppm:'10',  c:'tm-low'},
+    {n:2, pos:'Baja',    cant:'≤0.001 por mil  |  1 en 1,000,000',tiempo:'Menos de una vez al año',ppm:'1',c:'tm-low'},
+    {n:1, pos:'Muy baja',cant:'Falla eliminada mediante control preventivo',tiempo:'Nunca',  ppm:'0',   c:'tm-low'},
+  ];
+  let h='<div class="tm-sec"><strong>Instrucción:</strong> Usa la columna que aplique — por <strong>cantidad/ppm</strong> O por <strong>frecuencia de tiempo</strong>.</div>';
+  h+='<table class="tm-table"><thead><tr><th style="width:44px">OCC</th><th style="width:90px">Posibilidad</th><th>Por cantidad / ratio</th><th>Por frecuencia de tiempo</th><th style="width:70px;text-align:right">PPM</th></tr></thead><tbody>';
+  rows.forEach(r=>{h+='<tr class="tm-sel" onclick="selectTmRow('+r.n+',\''+r.pos+'\')"><td class="tm-n '+r.c+'">'+r.n+'</td><td class="tm-lvl '+r.c+'">'+r.pos+'</td><td>'+r.cant+'</td><td>'+r.tiempo+'</td><td style="text-align:right;font-family:var(--mono);font-size:11px">'+r.ppm+'</td></tr>';});
+  h+='</tbody></table>';return h;
+}
+
+function buildDetTable(){
+  const rows=[
+    {n:10,opp:'Sin oportunidad de detección',           criterio:'Sin control de proceso actual. No puede detectar o no se analiza.',                                                                             pos:'Casi imposible',    c:'tm-high'},
+    {n:9, opp:'Posiblemente no detecte en ninguna etapa',criterio:'Modo/error no fácilmente detectado. Ej: auditorías aleatorias.',                                                                              pos:'Muy remota',        c:'tm-high'},
+    {n:8, opp:'Detección después del procesamiento',    criterio:'Detección del modo de falla DESPUÉS del proceso por el operador (visual, tacto, audible).',                                                    pos:'Remota',            c:'tm-high'},
+    {n:7, opp:'Detección en la fuente',                 criterio:'Detección EN LA ESTACIÓN por el operador (visual, tacto, audible, pasa-no pasa, torque manual).',                                              pos:'Muy baja',          c:'tm-high'},
+    {n:6, opp:'Detección después del procesamiento',    criterio:'Detección DESPUÉS del proceso mediante medición por variables, O en estación mediante atributos (pasa-no pasa).',                             pos:'Baja',              c:'tm-med'},
+    {n:5, opp:'Detección en la fuente',                 criterio:'Medición por variables en estación. O controles automáticos con notificación (luces/alarmas). O verificación de primera pieza.',              pos:'Moderada',          c:'tm-med'},
+    {n:4, opp:'Detección después del procesamiento',    criterio:'Controles automáticos POST-PROCESO que detectan la parte discrepante y la aseguran para evitar procesamiento posterior.',                      pos:'Moderadamente alta',c:'tm-med'},
+    {n:3, opp:'Detección en la fuente',                 criterio:'Controles automáticos EN ESTACIÓN que detectan la parte discrepante y la aseguran para prevenir procesamiento posterior.',                     pos:'Alta',              c:'tm-low'},
+    {n:2, opp:'Detección del error / prevención',       criterio:'Controles automáticos en estación que detectan el ERROR (causa) y EVITAN que se produzca una parte discrepante.',                             pos:'Muy alta',          c:'tm-low'},
+    {n:1, opp:'Prevención del error — Poka-Yoke',       criterio:'Prevención por diseño de dispositivo, máquina o parte. NO se pueden hacer partes discrepantes. A prueba de error por diseño.',               pos:'Casi seguro',       c:'tm-low'},
+  ];
+  let h='<div class="tm-sec"><strong>Instrucción:</strong> Identifica el tipo de control que tienes. Haz clic en el renglón que describe tu situación. <strong>1 = mejor (poka-yoke) · 10 = sin detección.</strong></div>';
+  h+='<table class="tm-table"><thead><tr><th style="width:44px">DET</th><th style="width:200px">Oportunidad de detección</th><th>Criterio: Posibilidad de detección por control de proceso</th><th style="width:130px">Posibilidad</th></tr></thead><tbody>';
+  rows.forEach(r=>{h+='<tr class="tm-sel" onclick="selectTmRow('+r.n+',\''+r.pos+'\')"><td class="tm-n '+r.c+'">'+r.n+'</td><td class="tm-lvl">'+r.opp+'</td><td>'+r.criterio+'</td><td class="tm-lvl '+r.c+'">'+r.pos+'</td></tr>';});
+  h+='</tbody></table>';return h;
+}
+
+// ==================== EXPORT ====================
+function exportPFD(){
+  const pfmea=document.getElementById('pfmea_no').value||'PFD';
+  const prod=document.getElementById('product').value||'Proceso';
+  let txt=`DIAGRAMA DE FLUJO DEL PROCESO — ${prod}\n${'='.repeat(60)}\nPFMEA: ${pfmea}\n\n`;
+  pfdSteps.forEach((s,i)=>{
+    const sym={op:'[O]',insp:'<I>',transp:'→',store:'▽',dec:'◇'}[s.type]||'[ ]';
+    txt+=`${sym} ${s.op_id} — ${s.name}\n`;
+    if(s.func) txt+=`    Función: ${s.func}\n`;
+    if(s.type==='dec'){txt+=`    SÍ → ${s.yes||'—'}\n    NO → ${s.no||'—'}\n`;}
+    txt+='\n';
+  });
+  dl(txt,`PFD_${pfmea}.txt`,'text/plain');
+}
+
+function exportTXT(){
+  const pfmea=document.getElementById('pfmea_no').value||'AMEF';
+  let txt=`PFMEA\n${'='.repeat(60)}\nPFMEA: ${pfmea}\nProducto: ${document.getElementById('product').value||'—'}\nPreparado por: ${document.getElementById('prepared_by').value||'—'}\nTotal renglones: ${rows.length}\n\n`;
+  rows.forEach((r,i)=>{
+    txt+=`${'─'.repeat(60)}\n#${i+1} | Op:${r.op_id} | ${r.proc_step}\nModo: ${r.failure_mode} | SEV:${r.sev}\nEfectos: ${r.failure_effect} | Crítico: ${r.efecto_critico}\nCausa: ${r.failure_cause} | OCC:${r.occ} | DET:${r.det} | RPN:${r.rpn} (${rl(r.rpn)})\nPrevención: ${r.ctrl_prev||'—'} | Detección: ${r.ctrl_det||'—'}\nAcciones: ${r.rec_actions||'—'} | Resp: ${r.resp||'—'}\n`;
+  });
+  dl(txt,`AMEF_${pfmea}.txt`,'text/plain');
+}
+
+function exportCSV(){
+  const h=['Op_ID','Paso','Modo_Falla','Efectos','Efecto_Critico','SEV','Causa','OCC','Ctrl_Prev','Ctrl_Det','DET','RPN','Nivel','Acciones','Responsable'];
+  const d=rows.map(r=>[r.op_id,r.proc_step,r.failure_mode,r.failure_effect,r.efecto_critico||'',r.sev,r.failure_cause,r.occ,r.ctrl_prev,r.ctrl_det,r.det,r.rpn,rl(r.rpn),r.rec_actions,r.resp].map(v=>'"'+String(v||'').replace(/"/g,'""')+'"'));
+  dl('\uFEFF'+[h.join(','),...d.map(r=>r.join(','))].join('\n'),`AMEF_${document.getElementById('pfmea_no').value||'export'}.csv`,'text/csv;charset=utf-8');
+}
+
+function dl(content,filename,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([content],{type}));a.download=filename;a.click();}
+
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2800);}
+</script>
+</body>
+</html>
