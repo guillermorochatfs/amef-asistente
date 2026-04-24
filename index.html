@@ -180,6 +180,7 @@ textarea{min-height:54px}
 .step-type-btn .desc{font-size:10px;color:var(--text3);margin-top:2px}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
 </head>
 <body>
 <div class="toast" id="toast"></div>
@@ -1175,7 +1176,7 @@ function exportTXT(){
   dl(txt,`AMEF_${pfmea}.txt`,'text/plain');
 }
 
-function exportCSV(){
+async function exportCSV(){
   const pfmea   = document.getElementById('pfmea_no').value||'Sin número';
   const product = document.getElementById('product').value||'Sin producto';
   const prepBy  = document.getElementById('prepared_by').value||'—';
@@ -1183,208 +1184,145 @@ function exportCSV(){
   const approval= document.getElementById('approval').value||'—';
   const revDate = document.getElementById('rev_date').value||'—';
 
-  const wb = XLSX.utils.book_new();
+  if(rows.length===0){ alert('No hay renglones para exportar.'); return; }
+  showToast('Generando Excel ejecutivo...');
 
-  // ── Helpers ──
-  const C = {
-    hdrDark:  {fgColor:{rgb:'1F3864'}},
-    hdrMed:   {fgColor:{rgb:'2E75B6'}},
-    hdrLight: {fgColor:{rgb:'D6E4F0'}},
-    rpnHigh:  {fgColor:{rgb:'FCE4D6'}},
-    rpnMed:   {fgColor:{rgb:'FFF2CC'}},
-    rpnLow:   {fgColor:{rgb:'E2EFDA'}},
-    white:    {fgColor:{rgb:'FFFFFF'}},
-    repeat:   {fgColor:{rgb:'EEF4FB'}},
-  };
-  const fW  = (sz,b)=>({bold:b||false,name:'Arial',sz:sz||9,color:{rgb:'FFFFFF'}});
-  const fD  = (sz,b)=>({bold:b||false,name:'Arial',sz:sz||9,color:{rgb:'000000'}});
-  const fB  = ()=>({bold:true,name:'Arial',sz:9});
-  const fS  = ()=>({name:'Arial',sz:8,color:{rgb:'555555'}});
-  const fR  = ()=>({bold:true,name:'Arial',sz:9,color:{rgb:'C00000'}});
-  const fG  = ()=>({name:'Arial',sz:8,color:{rgb:'888888'},italic:true});
-  const aCC = {horizontal:'center',vertical:'center',wrapText:true};
-  const aLT = {horizontal:'left',vertical:'top',wrapText:true};
-  const aLC = {horizontal:'left',vertical:'center',wrapText:true};
-  const bT  = {top:{style:'thin',color:{rgb:'CCCCCC'}},bottom:{style:'thin',color:{rgb:'CCCCCC'}},left:{style:'thin',color:{rgb:'CCCCCC'}},right:{style:'thin',color:{rgb:'CCCCCC'}}};
-  const bM  = {top:{style:'medium',color:{rgb:'2E75B6'}},bottom:{style:'medium',color:{rgb:'2E75B6'}},left:{style:'medium',color:{rgb:'2E75B6'}},right:{style:'medium',color:{rgb:'2E75B6'}}};
+  const wb = new ExcelJS.Workbook();
+  const BLUE_DARK='1F3864', BLUE_MED='2E75B6', BLUE_LIGHT='D6E4F0';
+  const RED_L='FCE4D6', YEL_L='FFF2CC', GRN_L='E2EFDA';
+  const WHITE='FFFFFF', REPEAT='EEF4FB';
+  const RED_T='C00000', YEL_T='7F6000', GRN_T='375623';
 
-  function buildSheet(){
-    const ws={};
-    const range={s:{r:0,c:0},e:{r:0,c:0}};
-    function sc(r,c,v,s){
-      const addr=XLSX.utils.encode_cell({r,c});
-      ws[addr]={v,t:typeof v==='number'?'n':'s',s:s||{}};
-      if(r>range.e.r)range.e.r=r;
-      if(c>range.e.c)range.e.c=c;
+  function fl(hex){ return {type:'pattern',pattern:'solid',fgColor:{argb:'FF'+hex}}; }
+  function fn(bold,sz,color,italic){ return {name:'Arial',bold:!!bold,size:sz||9,color:{argb:'FF'+(color||'000000')},italic:!!italic}; }
+  function al(h,v){ return {horizontal:h||'left',vertical:v||'top',wrapText:true}; }
+  function bd(c){ const s={style:'thin',color:{argb:'FF'+(c||'CCCCCC')}}; return {top:s,bottom:s,left:s,right:s}; }
+  function bdm(){ const s={style:'medium',color:{argb:'FF2E75B6'}}; return {top:s,bottom:s,left:s,right:s}; }
+  function rpnInfo(rpn){ return rpn>=100?['Alto',RED_L,RED_T]:rpn>=40?['Medio',YEL_L,YEL_T]:['Bajo',GRN_L,GRN_T]; }
+
+  const ws = wb.addWorksheet('PFMEA');
+  const colWidths = [6,18,22,22,20,5,22,5,18,18,5,7,11,22,14];
+  colWidths.forEach((w,i) => { ws.getColumn(i+1).width = w; });
+
+  // Title
+  ws.mergeCells('A1:O1');
+  const t1 = ws.getCell('A1');
+  t1.value = 'ANÁLISIS DE MODO Y EFECTO DE FALLA DE PROCESO — PFMEA';
+  t1.font = fn(true,14,WHITE); t1.fill = fl(BLUE_DARK);
+  t1.alignment = al('left','center'); t1.border = bdm();
+  ws.getRow(1).height = 32;
+
+  // Header data rows 2-4
+  const hdrData = [
+    ['Número de PFMEA:',pfmea,'Preparado por:',prepBy],
+    ['Producto / Proceso:',product,'Equipo:',team],
+    ['Fecha de revisión:',revDate,'Aprobación:',approval],
+  ];
+  hdrData.forEach((row,idx) => {
+    const r = idx+2;
+    ws.mergeCells(`B${r}:H${r}`); ws.mergeCells(`J${r}:O${r}`);
+    const c1=ws.getCell(r,1); c1.value=row[0]; c1.font=fn(true,10,WHITE); c1.fill=fl(BLUE_MED); c1.alignment=al('left','center'); c1.border=bd();
+    const c2=ws.getCell(r,2); c2.value=row[1]; c2.font=fn(true,10); c2.fill=fl(BLUE_LIGHT); c2.alignment=al('left','center'); c2.border=bd();
+    for(let c=3;c<=8;c++){const cc=ws.getCell(r,c); cc.fill=fl(BLUE_LIGHT); cc.border=bd();}
+    const c9=ws.getCell(r,9); c9.value=row[2]; c9.font=fn(true,10,WHITE); c9.fill=fl(BLUE_MED); c9.alignment=al('left','center'); c9.border=bd();
+    const c10=ws.getCell(r,10); c10.value=row[3]; c10.font=fn(true,10); c10.fill=fl(BLUE_LIGHT); c10.alignment=al('left','center'); c10.border=bd();
+    for(let c=11;c<=15;c++){const cc=ws.getCell(r,c); cc.fill=fl(BLUE_LIGHT); cc.border=bd();}
+    ws.getRow(r).height=18;
+  });
+  ws.getRow(5).height=6;
+
+  // Table headers row 6
+  const hdrs=['Op.','Paso de proceso','Modo de falla potencial','Efectos potenciales','Efecto crítico
+(define SEV)','SEV','Causa potencial','OCC','Controles de
+Prevención','Controles de
+Detección','DET','RPN','Nivel de
+riesgo','Acciones recomendadas','Responsable'];
+  hdrs.forEach((h,i) => {
+    const c=ws.getCell(6,i+1); c.value=h; c.font=fn(true,9,WHITE);
+    c.fill=fl(BLUE_DARK); c.alignment=al('center','center'); c.border=bdm();
+  });
+  ws.getRow(6).height=30;
+
+  // Data rows
+  let lastMode='';
+  rows.forEach((r,idx) => {
+    const rowNum=idx+7;
+    const isRep = r.failure_mode===lastMode;
+    lastMode = r.failure_mode;
+    const rpn = r.rpn||0;
+    const [lvl,rpnBg,rpnTx] = rpnInfo(rpn);
+    const rowBg = isRep?REPEAT:WHITE;
+
+    function sc(col,val,bold,bg,tx,h,v,sz,italic,med){
+      const c=ws.getCell(rowNum,col); c.value=(val!==null&&val!==undefined)?val:'';
+      c.font=fn(bold,sz||9,tx||'000000',italic); c.fill=fl(bg||rowBg);
+      c.alignment=al(h||'left',v||'top'); c.border=med?bdm():bd();
     }
+    sc(1, r.op_id||'',         true,BLUE_LIGHT,null,'center','center');
+    sc(2, r.proc_step||'',     false,rowBg,isRep?'888888':'000000',null,null,9,isRep);
+    sc(3, r.failure_mode||'',  !isRep,rowBg,isRep?'888888':'000000',null,null,9,isRep);
+    sc(4, isRep?'':r.failure_effect||'');
+    sc(5, isRep?'':r.efecto_critico||'', false,rowBg,RED_T);
+    sc(6, isRep?'':r.sev||'', true,isRep?rowBg:YEL_L,null,'center','center');
+    sc(7, r.failure_cause||'');
+    sc(8, r.occ||'',           false,rowBg,null,'center','center');
+    sc(9, r.ctrl_prev||'',     false,rowBg,'444444',null,null,8);
+    sc(10,r.ctrl_det||'',      false,rowBg,'444444',null,null,8);
+    sc(11,r.det||'',           false,rowBg,null,'center','center');
+    sc(12,rpn,                 true,rpnBg,rpnTx,'center','center',11,false,true);
+    sc(13,lvl,                 true,rpnBg,rpnTx,'center','center');
+    sc(14,r.rec_actions||'',   false,rowBg,null,null,null,8);
+    sc(15,r.resp||'',          false,rowBg,'555555',null,null,8);
+    ws.getRow(rowNum).height=45;
+  });
 
-    let row=0;
+  // Summary row
+  const sr=7+rows.length+1;
+  const alto=rows.filter(r=>(r.rpn||0)>=100).length;
+  const medio=rows.filter(r=>(r.rpn||0)>=40&&(r.rpn||0)<100).length;
+  const bajo=rows.filter(r=>(r.rpn||0)<40).length;
+  [[1,'Total renglones:',rows.length,BLUE_LIGHT,'1F3864'],[4,'RPN Alto (≥100):',alto,RED_L,RED_T],[7,'RPN Medio (40-99):',medio,YEL_L,YEL_T],[10,'RPN Bajo (<40):',bajo,GRN_L,GRN_T]].forEach(([col,lbl,val,bg,tx])=>{
+    const c1=ws.getCell(sr,col); c1.value=lbl; c1.font=fn(true,9,tx); c1.fill=fl(bg); c1.alignment=al('left','center'); c1.border=bd();
+    const c2=ws.getCell(sr,col+1); c2.value=val; c2.font=fn(true,11,tx); c2.fill=fl(bg); c2.alignment=al('center','center'); c2.border=bd();
+  });
+  ws.getRow(sr).height=22;
+  ws.views=[{state:'frozen',ySplit:6}];
 
-    // Título
-    sc(row,0,'ANÁLISIS DE MODO Y EFECTO DE FALLA DE PROCESO — PFMEA',{font:fW(14,true),fill:C.hdrDark,alignment:aLC,border:bM});
-    for(let c=1;c<=14;c++) sc(row,c,'',{fill:C.hdrDark,border:bM});
-    row++;
+  // Sheet 2 — Scales
+  const ws2=wb.addWorksheet('Escalas SEV-OCC-DET');
+  [6,22,50,50,10].forEach((w,i)=>{ ws2.getColumn(i+1).width=w; });
+  ws2.mergeCells('A1:E1');
+  const ts=ws2.getCell('A1'); ts.value='TABLAS DE REFERENCIA — SEV, OCC, DET  |  AIAG 4th Edition';
+  ts.font=fn(true,13,WHITE); ts.fill=fl(BLUE_DARK); ts.alignment=al('left','center');
+  ws2.getRow(1).height=28;
 
-    // Encabezado datos
-    const hdrFields=[
-      ['Número de PFMEA:',pfmea,'Preparado por:',prepBy],
-      ['Producto / Proceso:',product,'Equipo:',team],
-      ['Fecha de revisión:',revDate,'Aprobación:',approval],
-    ];
-    hdrFields.forEach(([l1,v1,l2,v2])=>{
-      sc(row,0,l1,{font:fW(10,true),fill:C.hdrMed,alignment:aLC,border:bT});
-      sc(row,1,v1,{font:fD(10,true),fill:C.hdrLight,alignment:aLC,border:bT});
-      for(let c=2;c<=7;c++) sc(row,c,'',{fill:C.hdrLight,border:bT});
-      sc(row,8,l2,{font:fW(10,true),fill:C.hdrMed,alignment:aLC,border:bT});
-      sc(row,9,v2,{font:fD(10,true),fill:C.hdrLight,alignment:aLC,border:bT});
-      for(let c=10;c<=14;c++) sc(row,c,'',{fill:C.hdrLight,border:bT});
-      row++;
+  function addScale(startRow,title,colHdrs,dataRows){
+    const ec=String.fromCharCode(64+colHdrs.length);
+    ws2.mergeCells(`A${startRow}:${ec}${startRow}`);
+    const tc=ws2.getCell(startRow,1); tc.value=title; tc.font=fn(true,11,WHITE); tc.fill=fl(BLUE_MED); tc.alignment=al('left','center');
+    ws2.getRow(startRow).height=22;
+    colHdrs.forEach((h,i)=>{ const c=ws2.getCell(startRow+1,i+1); c.value=h; c.font=fn(true,9,WHITE); c.fill=fl(BLUE_DARK); c.alignment=al('center','center'); c.border=bd(); });
+    ws2.getRow(startRow+1).height=20;
+    dataRows.forEach((row,ri)=>{
+      const rn=startRow+2+ri; const n=row[0];
+      const bg=n>=8?RED_L:n>=5?YEL_L:GRN_L; const tx=n>=8?RED_T:n>=5?YEL_T:GRN_T;
+      row.forEach((val,ci)=>{ const c=ws2.getCell(rn,ci+1); c.value=val; c.fill=fl(ci<=1?bg:WHITE); c.font=fn(ci<=1,9,ci<=1?tx:'000000'); c.alignment=al(ci<=1?'center':'left','top'); c.border=bd(); });
+      ws2.getRow(rn).height=36;
     });
-    row++; // spacer
-
-    // Headers tabla
-    const headers=[
-      {t:'Op.',w:6},{t:'Paso de proceso',w:18},{t:'Modo de falla potencial',w:22},
-      {t:'Efectos potenciales',w:22},{t:'Efecto crítico (define SEV)',w:20},{t:'SEV',w:5},
-      {t:'Causa potencial',w:22},{t:'OCC',w:5},{t:'Controles de Prevención',w:20},
-      {t:'Controles de Detección',w:20},{t:'DET',w:5},{t:'RPN',w:7},
-      {t:'Nivel de riesgo',w:12},{t:'Acciones recomendadas',w:22},{t:'Responsable',w:14}
-    ];
-    headers.forEach((h,c)=>{
-      sc(row,c,h.t,{font:fW(9,true),fill:C.hdrDark,alignment:aCC,border:bM});
-    });
-    const hdrRow=row;
-    row++;
-
-    // Datos
-    let lastMode='';
-    rows.forEach(r=>{
-      const isRepeat=r.failure_mode===lastMode;
-      lastMode=r.failure_mode;
-      const rpnF=r.rpn>=100?C.rpnHigh:r.rpn>=40?C.rpnMed:C.rpnLow;
-      const rowF=isRepeat?C.repeat:C.white;
-      sc(row,0, r.op_id||'',           {font:fB(),fill:C.hdrLight,alignment:aCC,border:bT});
-      sc(row,1, r.proc_step||'',        {font:isRepeat?fG():fD(),fill:rowF,alignment:aLT,border:bT});
-      sc(row,2, r.failure_mode||'',     {font:isRepeat?fG():fB(),fill:rowF,alignment:aLT,border:bT});
-      sc(row,3, isRepeat?'':r.failure_effect||'', {font:fD(),fill:rowF,alignment:aLT,border:bT});
-      sc(row,4, isRepeat?'':r.efecto_critico||'', {font:{...fD(),color:{rgb:'C00000'}},fill:rowF,alignment:aLT,border:bT});
-      sc(row,5, isRepeat?'':r.sev||'', {font:fB(),fill:isRepeat?rowF:C.rpnMed,alignment:aCC,border:bT});
-      sc(row,6, r.failure_cause||'',   {font:fD(),fill:rowF,alignment:aLT,border:bT});
-      sc(row,7, r.occ||'',             {font:fD(),fill:rowF,alignment:aCC,border:bT});
-      sc(row,8, r.ctrl_prev||'',       {font:fS(),fill:rowF,alignment:aLT,border:bT});
-      sc(row,9, r.ctrl_det||'',        {font:fS(),fill:rowF,alignment:aLT,border:bT});
-      sc(row,10,r.det||'',             {font:fD(),fill:rowF,alignment:aCC,border:bT});
-      sc(row,11,r.rpn||0,              {font:r.rpn>=100?fR():fB(),fill:rpnF,alignment:aCC,border:bM});
-      sc(row,12,rl(r.rpn||0),          {font:r.rpn>=100?fR():fB(),fill:rpnF,alignment:aCC,border:bT});
-      sc(row,13,r.rec_actions||'',     {font:fD(),fill:rowF,alignment:aLT,border:bT});
-      sc(row,14,r.resp||'',            {font:fS(),fill:rowF,alignment:aLT,border:bT});
-      row++;
-    });
-
-    // Fila resumen
-    row++;
-    const sumData=[
-      [0,'Total renglones:',rows.length,C.hdrLight,fD(9,true)],
-      [3,'RPN Alto (≥100):',rows.filter(r=>r.rpn>=100).length,C.rpnHigh,fR()],
-      [6,'RPN Medio (40-99):',rows.filter(r=>r.rpn>=40&&r.rpn<100).length,C.rpnMed,{bold:true,name:'Arial',sz:9,color:{rgb:'7F6000'}}],
-      [9,'RPN Bajo (<40):',rows.filter(r=>r.rpn<40).length,C.rpnLow,{bold:true,name:'Arial',sz:9,color:{rgb:'375623'}}],
-    ];
-    sumData.forEach(([c,lbl,val,fill,font])=>{
-      sc(row,c,lbl,{font,fill,alignment:aLC,border:bT});
-      sc(row,c+1,val,{font:{...font,sz:11},fill,alignment:aCC,border:bT});
-    });
-
-    ws['!ref']=XLSX.utils.encode_range(range);
-    ws['!cols']=headers.map(h=>({wch:h.w}));
-    ws['!rows']=[{hpt:30},...Array(3).fill({hpt:18}),{hpt:8},{hpt:22},...Array(rows.length).fill({hpt:45}),{hpt:8},{hpt:18}];
-    ws['!merges']=[
-      {s:{r:0,c:0},e:{r:0,c:14}},
-      {s:{r:1,c:1},e:{r:1,c:7}},{s:{r:1,c:9},e:{r:1,c:14}},
-      {s:{r:2,c:1},e:{r:2,c:7}},{s:{r:2,c:9},e:{r:2,c:14}},
-      {s:{r:3,c:1},e:{r:3,c:7}},{s:{r:3,c:9},e:{r:3,c:14}},
-    ];
-    return ws;
+    return startRow+2+dataRows.length+2;
   }
 
-  function buildScalesSheet(){
-    const ws={};
-    const range={s:{r:0,c:0},e:{r:0,c:0}};
-    function sc(r,c,v,s){
-      const addr=XLSX.utils.encode_cell({r,c});
-      ws[addr]={v,t:typeof v==='number'?'n':'s',s:s||{}};
-      if(r>range.e.r)range.e.r=r;
-      if(c>range.e.c)range.e.c=c;
-    }
-    let r=0;
-    sc(r,0,'TABLAS DE REFERENCIA — SEV, OCC, DET',{font:fW(13,true),fill:C.hdrDark,alignment:aLC});
-    for(let c=1;c<=4;c++) sc(r,c,'',{fill:C.hdrDark});
-    r+=2;
+  let r2=addScale(3,'TABLA DE SEVERIDAD (SEV)',['SEV','Nivel','Criterio — Efecto en el CLIENTE','Criterio — Efecto en el PROCESO'],[[10,'Peligroso sin aviso','Afecta operación segura SIN aviso / incumplimiento regulaciones gobierno','Afecta operador/planta/mantenimiento y/o regulaciones sin aviso'],[9,'Peligroso con aviso','Afecta operación segura CON aviso / incumplimiento regulaciones gobierno','Afecta cliente/operador/planta y/o regulaciones con aviso'],[8,'Muy alto','Pérdida de función primaria — producto inoperable (sin riesgo seguridad)','Tiempo muerto >8h o producción partes defectuosas >4h'],[7,'Alto','Degradación de función primaria — producto operable a nivel reducido','Tiempo muerto 4-8h o producción partes defectuosas 3-4h'],[6,'Moderado','Pérdida de función secundaria — funciones de comodidad inoperables','Tiempo muerto 1-4h o producción partes defectuosas 1-3h'],[5,'Bajo','Degradación de función secundaria — funciones de comodidad a nivel reducido','Tiempo muerto 30min-1h o producción partes defectuosas hasta 1h'],[4,'Muy bajo','Apariencia no conforme, percibida por >75% clientes','Tiempo muerto 10-30min, sin producción de partes defectuosas'],[3,'Menor','Apariencia no conforme, percibida por ~50% clientes','Tiempo muerto hasta 10min, sin producción de partes defectuosas'],[2,'Muy menor','Apariencia no conforme, percibida por <25% clientes','Variabilidad fuera de especificación, ajuste requerido, sin tiempo muerto ni defectuosos'],[1,'Ninguno','Sin efecto discernible','Variabilidad de parámetros dentro de límites de especificación']]);
+  r2=addScale(r2,'TABLA DE OCURRENCIA (OCC)',['OCC','Posibilidad','Por cantidad / ratio','Por frecuencia de tiempo','PPM'],[[10,'Muy alta','≥100 por mil  |  ≥1 en 10','Todo el tiempo',100000],[9,'Alta','50 por mil  |  1 en 20','Casi siempre',50000],[8,'Alta','20 por mil  |  1 en 50','Más de una vez por turno',20000],[7,'Alta','10 por mil  |  1 en 100','Más de una vez al día',10000],[6,'Moderada','2 por mil  |  1 en 500','Más de una vez por semana',2000],[5,'Moderada','0.5 por mil  |  1 en 2,000','Más de una vez al mes',500],[4,'Moderada','0.1 por mil  |  1 en 10,000','Más de una vez al año',100],[3,'Baja','0.01 por mil  |  1 en 100,000','Una vez al año',10],[2,'Baja','≤0.001 por mil  |  1 en 1,000,000','Menos de una vez al año',1],[1,'Muy baja','Falla eliminada mediante control preventivo','Nunca',0]]);
+  addScale(r2,'TABLA DE DETECCIÓN (DET)',['DET','Oportunidad de detección','Criterio: Posibilidad de detección por control de proceso','Posibilidad'],[[10,'Sin oportunidad','Sin control de proceso actual. No puede detectar o no se analiza.','Casi imposible'],[9,'Posiblemente no detecte','Modo/error no fácilmente detectado. Ej: auditorías aleatorias.','Muy remota'],[8,'Detección post-proceso','Detección DESPUÉS del proceso por operador (visual/tacto/audible).','Remota'],[7,'Detección en fuente','Detección EN ESTACIÓN por operador (visual/tacto/pasa-no pasa/torque manual).','Muy baja'],[6,'Detección post-proceso','Detección post-proceso por medición variables, O en estación por atributos.','Baja'],[5,'Detección en fuente','Medición variables en estación. O controles automáticos con notificación. O 1a pieza.','Moderada'],[4,'Detección post-proceso','Controles automáticos post-proceso que detectan parte discrepante y la aseguran.','Moderadamente alta'],[3,'Detección en fuente','Controles automáticos en estación que detectan parte discrepante y la aseguran.','Alta'],[2,'Detección del error','Controles automáticos en estación que detectan el ERROR y evitan partes discrepantes.','Muy alta'],[1,'Prevención — Poka-Yoke','Prevención por diseño de dispositivo/máquina. NO se pueden hacer partes discrepantes.','Casi seguro']]);
 
-    const addTable=(title,cols,data)=>{
-      sc(r,0,title,{font:fW(11,true),fill:C.hdrMed,alignment:aCC});
-      for(let c=1;c<cols.length;c++) sc(r,c,'',{fill:C.hdrMed});
-      r++;
-      cols.forEach((h,c)=>sc(r,c,h,{font:fW(9,true),fill:C.hdrDark,alignment:aCC,border:bT}));
-      r++;
-      data.forEach(row=>{
-        const n=row[0];
-        const f=n>=8?C.rpnHigh:n>=5?C.rpnMed:C.rpnLow;
-        row.forEach((v,c)=>{
-          sc(r,c,v,{font:c<=1?fB():fD(),fill:c<=1?f:C.white,alignment:c<=1?aCC:aLT,border:bT});
-        });
-        r++;
-      });
-      r+=2;
-    };
-
-    addTable('TABLA DE SEVERIDAD (SEV)',['SEV','Nivel','Criterio — Efecto en el CLIENTE','Criterio — Efecto en el PROCESO'],[
-      [10,'Peligroso sin aviso','Afecta operación segura SIN aviso / incumplimiento regulaciones gobierno','Afecta operador/planta/mantenimiento y/o regulaciones sin aviso'],
-      [9,'Peligroso con aviso','Afecta operación segura CON aviso / incumplimiento regulaciones gobierno','Afecta cliente/operador/planta y/o regulaciones con aviso'],
-      [8,'Muy alto','Pérdida de función primaria — producto inoperable (sin riesgo seguridad)','Tiempo muerto >8h o partes defectuosas >4h'],
-      [7,'Alto','Degradación de función primaria — producto operable a nivel reducido','Tiempo muerto 4-8h o partes defectuosas 3-4h'],
-      [6,'Moderado','Pérdida de función secundaria — comodidades inoperables','Tiempo muerto 1-4h o partes defectuosas 1-3h'],
-      [5,'Bajo','Degradación de función secundaria — comodidades a nivel reducido','Tiempo muerto 30min-1h o partes defectuosas hasta 1h'],
-      [4,'Muy bajo','Apariencia no conforme, percibida por >75% clientes','Tiempo muerto 10-30min sin partes defectuosas'],
-      [3,'Menor','Apariencia no conforme, percibida por ~50% clientes','Tiempo muerto hasta 10min sin partes defectuosas'],
-      [2,'Muy menor','Apariencia no conforme, percibida por <25% clientes','Variabilidad fuera de especificación, sin tiempo muerto ni defectuosos'],
-      [1,'Ninguno','Sin efecto discernible','Variabilidad dentro de límites de especificación'],
-    ]);
-
-    addTable('TABLA DE OCURRENCIA (OCC)',['OCC','Posibilidad','Por cantidad / ratio','Por frecuencia de tiempo','PPM'],[
-      [10,'Muy alta','≥100 por mil  |  ≥1 en 10','Todo el tiempo',100000],
-      [9,'Alta','50 por mil  |  1 en 20','Casi siempre',50000],
-      [8,'Alta','20 por mil  |  1 en 50','Más de una vez por turno',20000],
-      [7,'Alta','10 por mil  |  1 en 100','Más de una vez al día',10000],
-      [6,'Moderada','2 por mil  |  1 en 500','Más de una vez por semana',2000],
-      [5,'Moderada','0.5 por mil  |  1 en 2,000','Más de una vez al mes',500],
-      [4,'Moderada','0.1 por mil  |  1 en 10,000','Más de una vez al año',100],
-      [3,'Baja','0.01 por mil  |  1 en 100,000','Una vez al año',10],
-      [2,'Baja','≤0.001 por mil  |  1 en 1,000,000','Menos de una vez al año',1],
-      [1,'Muy baja','Falla eliminada mediante control preventivo','Nunca',0],
-    ]);
-
-    addTable('TABLA DE DETECCIÓN (DET)',['DET','Oportunidad','Criterio: Posibilidad de detección por control de proceso','Posibilidad'],[
-      [10,'Sin oportunidad','Sin control de proceso. No puede detectar o no se analiza.','Casi imposible'],
-      [9,'Posiblemente no detecte','Modo/error no fácilmente detectado. Ej: auditorías aleatorias.','Muy remota'],
-      [8,'Detección post-proceso','Detección DESPUÉS del proceso por operador (visual/tacto/audible).','Remota'],
-      [7,'Detección en fuente','Detección EN ESTACIÓN por operador (visual/tacto/pasa-no pasa/torque manual).','Muy baja'],
-      [6,'Detección post-proceso','Detección post-proceso por medición variables, O en estación por atributos.','Baja'],
-      [5,'Detección en fuente','Medición variables en estación. O controles automáticos con notificación. O 1a pieza.','Moderada'],
-      [4,'Detección post-proceso','Controles automáticos post-proceso que aseguran parte discrepante.','Moderadamente alta'],
-      [3,'Detección en fuente','Controles automáticos en estación que aseguran parte discrepante.','Alta'],
-      [2,'Detección del error','Controles automáticos en estación que detectan el ERROR y evitan partes discrepantes.','Muy alta'],
-      [1,'Prevención — Poka-Yoke','Prevención por diseño de dispositivo/máquina. NO se pueden hacer partes discrepantes.','Casi seguro'],
-    ]);
-
-    ws['!ref']=XLSX.utils.encode_range(range);
-    ws['!cols']=[{wch:6},{wch:22},{wch:50},{wch:50},{wch:10}];
-    return ws;
-  }
-
-  XLSX.utils.book_append_sheet(wb, buildSheet(), 'PFMEA');
-  XLSX.utils.book_append_sheet(wb, buildScalesSheet(), 'Escalas SEV-OCC-DET');
-
-  XLSX.writeFile(wb, 'PFMEA_'+(document.getElementById('pfmea_no').value||'export')+'.xlsx', {bookSST:false,type:'binary',cellStyles:true});
+  const buf = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buf], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url; a.download='PFMEA_'+pfmea+'.xlsx'; a.click();
+  URL.revokeObjectURL(url);
+  showToast('Excel descargado correctamente');
 }
 
 function dl(content,filename,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([content],{type}));a.download=filename;a.click();}
