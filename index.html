@@ -1232,11 +1232,7 @@ async function exportCSV(){
   ws.getRow(5).height=6;
 
   // Table headers row 6
-  const hdrs=['Op.','Paso de proceso','Modo de falla potencial','Efectos potenciales','Efecto crítico
-(define SEV)','SEV','Causa potencial','OCC','Controles de
-Prevención','Controles de
-Detección','DET','RPN','Nivel de
-riesgo','Acciones recomendadas','Responsable'];
+  const hdrs=['Op.','Paso de proceso','Modo de falla potencial','Efectos potenciales','Efecto crítico\n(define SEV)','SEV','Causa potencial','OCC','Controles de\nPrevención','Controles de\nDetección','DET','RPN','Nivel de\nriesgo','Acciones recomendadas','Responsable'];
   hdrs.forEach((h,i) => {
     const c=ws.getCell(6,i+1); c.value=h; c.font=fn(true,9,WHITE);
     c.fill=fl(BLUE_DARK); c.alignment=al('center','center'); c.border=bdm();
