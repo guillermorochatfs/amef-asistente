@@ -224,6 +224,17 @@ textarea{min-height:54px}
             <div class="label">Decisión</div>
             <div class="desc">Punto de control Sí/No</div>
           </div>
+          <div class="step-type-btn" id="stype_diverge" onclick="selectStepType('diverge')">
+            <div class="icon">⑃</div>
+            <div class="label">Divergencia</div>
+            <div class="desc">Inicia procesos paralelos</div>
+          </div>
+          <div class="step-type-btn" id="stype_converge" onclick="selectStepType('converge')">
+            <div class="icon">⑂</div>
+            <div class="label">Convergencia</div>
+            <div class="desc">Une ramas paralelas</div>
+          </div>
+
         </div>
       </div>
       <div class="g2">
@@ -235,6 +246,35 @@ textarea{min-height:54px}
         <div class="g2">
           <div class="field"><div class="fl" style="color:var(--green)">Resultado SÍ → continúa a</div><input type="text" id="s_yes" placeholder="Ej: Siguiente operación"></div>
           <div class="field"><div class="fl" style="color:var(--red)">Resultado NO → va a</div><input type="text" id="s_no" placeholder="Ej: Retrabajo / Scrap"></div>
+        </div>
+      </div>
+      <div id="diverge_fields" style="display:none">
+        <div class="field">
+          <div class="fl" style="color:var(--accent)">Ramas paralelas <span class="req">*</span> <span class="hint">— Una por línea (nombre de cada subcomponente)</span></div>
+          <textarea id="s_branches" rows="3" placeholder="Ej:&#10;Upper&#10;Lower&#10;Gasket"></textarea>
+          <div style="font-size:11px;color:var(--text3);margin-top:4px">Cada rama tendrá sus propios pasos y será analizable en el PFMEA independientemente.</div>
+        </div>
+      </div>
+      <div id="converge_fields" style="display:none">
+        <div class="field">
+          <div class="fl" style="color:var(--green)">Ramas que convergen <span class="req">*</span> <span class="hint">— Selecciona las ramas que se unen aquí</span></div>
+          <div id="converge_branch_list" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px"></div>
+          <div style="font-size:11px;color:var(--text3);margin-top:6px">Operación resultante del ensamble: el nombre y función ya los definiste arriba.</div>
+        </div>
+      </div>
+      <div id="div_fields" style="display:none">
+        <div class="field">
+          <div class="fl">Nombre de las ramas paralelas <span class="req">*</span> <span class="hint">— Escribe una por línea. Ej: Upper / Lower / Gasket</span></div>
+          <textarea id="s_branches" rows="3" placeholder="Upper&#10;Lower&#10;Gasket"></textarea>
+        </div>
+        <div class="field">
+          <div class="fl" style="color:var(--text2);font-size:10px">Cada rama generará su propio grupo de pasos independiente en el diagrama.</div>
+        </div>
+      </div>
+      <div id="conv_fields" style="display:none">
+        <div class="field">
+          <div class="fl">Ramas que convergen aquí <span class="hint">— selecciona cuáles se unen en esta operación</span></div>
+          <div id="conv_branches_list" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px"></div>
         </div>
       </div>
       <div class="btn-row" style="margin-top:1rem">
@@ -491,12 +531,22 @@ function updateHeader(){
 }
 
 // ==================== PFD ====================
+function getNextOpId(){
+  // Find the highest numeric ID and add 10
+  if(pfdSteps.length===0) return '10';
+  const nums = pfdSteps
+    .map(s => parseInt(s.op_id))
+    .filter(n => !isNaN(n));
+  if(nums.length===0) return '10';
+  return String(Math.max(...nums) + 10);
+}
+
 function openStepModal(idx){
   editStepIdx = idx !== undefined ? idx : -1;
   selectedStepType = '';
   document.querySelectorAll('.step-type-btn').forEach(b=>b.classList.remove('sel'));
   ['s_op_id','s_name','s_func','s_yes','s_no'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-  document.getElementById('dec_fields').style.display='none';
+  ['dec_fields','diverge_fields','converge_fields'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
   if(editStepIdx>=0){
     const s=pfdSteps[editStepIdx];
     selectStepType(s.type);
@@ -510,6 +560,9 @@ function openStepModal(idx){
     document.getElementById('step_modal_title').textContent='Editar paso';
   } else {
     document.getElementById('step_modal_title').textContent='Agregar paso al diagrama';
+    // Auto-fill next op number
+    const opIdEl = document.getElementById('s_op_id');
+    if(opIdEl) opIdEl.value = getNextOpId();
   }
   document.getElementById('step_modal').classList.add('open');
   document.body.style.overflow='hidden';
@@ -527,22 +580,129 @@ function closeStepModalOutside(e){
 function selectStepType(t){
   selectedStepType=t;
   document.querySelectorAll('.step-type-btn').forEach(b=>b.classList.remove('sel'));
-  document.getElementById('stype_'+t).classList.add('sel');
+  const btn = document.getElementById('stype_'+t);
+  if(btn) btn.classList.add('sel');
   document.getElementById('dec_fields').style.display=t==='dec'?'block':'none';
+  document.getElementById('diverge_fields').style.display=t==='diverge'?'block':'none';
+  document.getElementById('converge_fields').style.display=t==='converge'?'block':'none';
+  if(t==='converge') populateConvergeBranchList();
 }
 
+function populateConvergeBranchList(){
+  // Find all active branches (from diverge steps)
+  const activeBranches = getActiveBranches();
+  const container = document.getElementById('conv_branches_list');
+  container.innerHTML = '';
+  if(activeBranches.length===0){
+    container.innerHTML = '<span style="font-size:11px;color:var(--text3)">No hay ramas divergentes definidas aún. Agrega primero un paso de Divergencia.</span>';
+    return;
+  }
+  activeBranches.forEach(b => {
+    const chip = document.createElement('label');
+    chip.style.cssText = 'display:flex;align-items:center;gap:6px;padding:5px 10px;border:1px solid var(--border2);border-radius:var(--radius);cursor:pointer;font-size:11px;color:var(--text2);background:var(--bg3)';
+    chip.innerHTML = '<input type="checkbox" value="'+b+'" checked style="accent-color:var(--accent)"> '+b;
+    container.appendChild(chip);
+  });
+}
+
+function getActiveBranches(){
+  const branches = [];
+  const convergedBranches = new Set();
+  pfdSteps.forEach(s => {
+    if(s.type==='converge' && s.converges) s.converges.forEach(b => convergedBranches.add(b));
+  });
+  pfdSteps.forEach(s => {
+    if(s.type==='diverge' && s.branches){
+      s.branches.forEach(b => {
+        if(!convergedBranches.has(b)) branches.push(b);
+      });
+    }
+  });
+  return [...new Set(branches)];
+}
+
+
+function addBranchStep(branchName, parentDivOpId){
+  // Open modal for a new step pre-assigned to this branch
+  editStepIdx = -1;
+  selectedStepType = '';
+  document.querySelectorAll('.step-type-btn').forEach(b=>b.classList.remove('sel'));
+  ['s_op_id','s_name','s_func','s_yes','s_no'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('dec_fields').style.display='none';
+  document.getElementById('diverge_fields').style.display='none';
+  document.getElementById('converge_fields').style.display='none';
+  // Auto-fill op id
+  const opIdEl = document.getElementById('s_op_id');
+  if(opIdEl) opIdEl.value = getNextOpId();
+  // Store pending branch assignment
+  window._pendingBranch = branchName;
+  window._pendingBranchParent = parentDivOpId;
+  document.getElementById('step_modal_title').textContent = 'Agregar paso — Rama: ' + branchName;
+  // Show branch indicator
+  const branchNote = document.querySelector('#step_modal .branch-note') || (() => {
+    const d = document.createElement('div');
+    d.className = 'branch-note';
+    d.style.cssText = 'padding:.5rem .75rem;background:rgba(79,124,255,0.08);border-radius:var(--radius);font-size:11px;color:var(--accent);margin-bottom:.75rem';
+    const modalBody = document.querySelector('#step_modal .modal > div:last-child');
+    if(modalBody) modalBody.insertBefore(d, modalBody.firstChild);
+    return d;
+  })();
+  branchNote.textContent = '📌 Este paso pertenece a la rama: ' + branchName;
+  document.getElementById('step_modal').classList.add('open');
+  document.body.style.overflow='hidden';
+}
 function saveStep(){
   if(!selectedStepType){alert('Selecciona el tipo de paso.');return;}
   const op_id=document.getElementById('s_op_id').value.trim();
   const name=document.getElementById('s_name').value.trim();
   if(!op_id||!name){alert('El ID y el nombre del paso son obligatorios.');return;}
+  // Parse branches for diverge
+  let branches = [];
+  if(selectedStepType==='diverge'){
+    const raw = document.getElementById('s_branches').value;
+    branches = raw.split('\n').map(b=>b.trim()).filter(b=>b.length>0);
+    if(branches.length<2){ alert('Define al menos 2 ramas paralelas.'); return; }
+  }
+  // Parse converging branches
+  let converges = [];
+  if(selectedStepType==='converge'){
+    document.querySelectorAll('#conv_branches_list input[type=checkbox]:checked').forEach(cb=>{
+      converges.push(cb.value);
+    });
+    if(converges.length<2){ alert('Selecciona al menos 2 ramas que convergen.'); return; }
+  }
   const step={
     type:selectedStepType, op_id, name,
     func:document.getElementById('s_func').value.trim(),
     yes:document.getElementById('s_yes').value.trim(),
     no:document.getElementById('s_no').value.trim(),
+    branches: branches,
+    converges: converges,
     analyzed:false
   };
+  // Assign branch if coming from addBranchStep
+  if(window._pendingBranch){
+    step.branch = window._pendingBranch;
+    step.branchParent = window._pendingBranchParent;
+    window._pendingBranch = null;
+    window._pendingBranchParent = null;
+    const branchNote = document.querySelector('#step_modal .branch-note');
+    if(branchNote) branchNote.textContent = '';
+  }
+  if(window._savingToBranch){
+    window._savingToBranch = false;
+    if(!pfdSteps[currentBranchDivergeIdx].branch_steps[currentBranchName])
+      pfdSteps[currentBranchDivergeIdx].branch_steps[currentBranchName]=[];
+    if(editBranchStepIdx>=0){
+      pfdSteps[currentBranchDivergeIdx].branch_steps[currentBranchName][editBranchStepIdx]=step;
+    } else {
+      pfdSteps[currentBranchDivergeIdx].branch_steps[currentBranchName].push(step);
+    }
+    renderPFD(); closeStepModal();
+    showToast('Paso agregado a rama '+currentBranchName);
+    scheduleAutosave();
+    return;
+  }
   if(editStepIdx>=0){ pfdSteps[editStepIdx]=step; }
   else { pfdSteps.push(step); }
   renderPFD();
@@ -567,13 +727,16 @@ function symHTML(type){
   if(type==='transp') return '<div class="sym-transp">T</div>';
   if(type==='store')  return '<div style="position:relative;width:36px;height:28px"><div style="width:0;height:0;border-left:18px solid transparent;border-right:18px solid transparent;border-top:28px solid var(--border2)"></div><div style="position:absolute;top:4px;left:50%;transform:translateX(-50%);font-size:9px;color:var(--text3);font-family:var(--mono)">S</div></div>';
   if(type==='dec')    return '<div class="sym-dec"><span>D</span></div>';
+  if(type==='diverge')    return '<div style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--accent)">⑃</div>';
+  if(type==='converge')   return '<div style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--green)">⑂</div>';
   if(type==='start')  return '<div class="sym-start">INI</div>';
   if(type==='end')    return '<div class="sym-end">FIN</div>';
   return '';
 }
 
 function typeLabel(t){
-  return {op:'Operación',insp:'Inspección',transp:'Transporte',store:'Almacenamiento',dec:'Decisión'}[t]||t;
+  return {op:'Operación',insp:'Inspección',transp:'Transporte',store:'Almacenamiento',
+          dec:'Decisión',div:'Divergencia',conv:'Convergencia'}[t]||t;
 }
 
 function renderPFD(){
@@ -591,24 +754,77 @@ function renderPFD(){
   list.appendChild(makeConnectorRow('start','',true));
 
   pfdSteps.forEach((s,i)=>{
-    list.appendChild(makeConnectorRow(s.type, i, i===0, i===pfdSteps.length-1, s));
-    // Decision branches
+    // ── Diverge: render parallel branches ──
+    if(s.type==='diverge'){
+      const divRow=document.createElement('div');
+      divRow.style.cssText='margin:.25rem 0';
+      const divHeader=document.createElement('div');
+      divHeader.style.cssText='display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(79,124,255,0.08);border:1px solid rgba(79,124,255,0.2);border-radius:var(--radius);margin-left:40px';
+      divHeader.innerHTML=`<span style="font-family:var(--mono);font-size:18px;color:var(--accent)">⑃</span><div style="flex:1"><span style="font-family:var(--mono);font-size:10px;color:var(--accent)">${s.op_id}</span><span style="font-size:12px;font-weight:500;margin-left:6px">${s.name}</span><span style="font-size:10px;color:var(--text3);margin-left:6px">→ ${(s.branches||[]).join(' · ')}</span></div><button class="btn" style="padding:3px 7px;font-size:10px" onclick="openStepModal(${i})">✎</button><button class="btn btn-danger" style="padding:3px 6px" onclick="deleteStep(${i})">×</button>`;
+      divRow.appendChild(divHeader);
+      const branchesContainer=document.createElement('div');
+      branchesContainer.style.cssText='display:flex;gap:8px;margin-top:6px;margin-left:40px';
+      (s.branches||[]).forEach(branchName=>{
+        const branchDiv=document.createElement('div');
+        branchDiv.style.cssText='flex:1;border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;min-width:0';
+        const bHeader=document.createElement('div');
+        bHeader.style.cssText='background:var(--bg3);padding:6px 10px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border)';
+        const branchSteps=(s.branch_steps||{})[branchName]||[];
+        bHeader.innerHTML=`<span style="font-size:12px;font-weight:500;color:var(--accent)">${branchName}</span><div style="display:flex;gap:4px;align-items:center"><span style="font-size:10px;color:var(--text3)">${branchSteps.length} paso(s)</span><button class="btn btn-ai" style="padding:2px 7px;font-size:10px" onclick="openBranchStepModal(${i},'${branchName}')">+ Paso</button></div>`;
+        branchDiv.appendChild(bHeader);
+        const bSteps=document.createElement('div');
+        bSteps.style.cssText='padding:6px';
+        if(branchSteps.length===0){
+          bSteps.innerHTML='<div style="font-size:11px;color:var(--text3);text-align:center;padding:8px">Sin pasos</div>';
+        } else {
+          branchSteps.forEach((bs,bi)=>{
+            const bsDiv=document.createElement('div');
+            bsDiv.style.cssText='display:flex;align-items:center;gap:6px;padding:4px 6px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:4px';
+            const analyzed=bs.analyzed||false;
+            const isAnalyzable=bs.type==='op'||bs.type==='insp';
+            bsDiv.innerHTML=`<span style="font-family:var(--mono);font-size:9px;color:var(--accent)">${bs.op_id}</span><span style="font-size:11px;flex:1">${bs.name}</span>${analyzed?'<span class="badge blow" style="font-size:9px">✓</span>':''}${isAnalyzable?(analyzed?`<button class="btn btn-green" style="padding:2px 6px;font-size:9px" onclick="openAmefForBranchStep(${i},'${branchName}',${bi})">✎ PFMEA</button>`:`<button class="btn btn-ai" style="padding:2px 6px;font-size:9px" onclick="openAmefForBranchStep(${i},'${branchName}',${bi})">⊕ PFMEA</button>`):''}<button class="btn btn-danger" style="padding:2px 5px;font-size:9px" onclick="deleteBranchStep(${i},'${branchName}',${bi})">×</button>`;
+            bSteps.appendChild(bsDiv);
+          });
+        }
+        branchDiv.appendChild(bSteps);
+        branchesContainer.appendChild(branchDiv);
+      });
+      divRow.appendChild(branchesContainer);
+      list.appendChild(divRow);
+      return;
+    }
+
+    // ── Converge ──
+    if(s.type==='converge'){
+      const convRow=document.createElement('div');
+      convRow.style.cssText='margin:.25rem 0;margin-left:40px';
+      convRow.innerHTML=`<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(45,212,160,0.08);border:1px solid rgba(45,212,160,0.2);border-radius:var(--radius)"><span style="font-family:var(--mono);font-size:18px;color:var(--green)">⑂</span><div style="flex:1"><span style="font-family:var(--mono);font-size:10px;color:var(--green)">${s.op_id}</span><span style="font-size:12px;font-weight:500;margin-left:6px">${s.name}</span><div style="font-size:10px;color:var(--text3);margin-top:2px">${(s.converging_branches||[]).join(' + ')} → ${s.name}</div></div><button class="btn btn-ai" style="padding:3px 8px;font-size:10px" onclick="openAmefForStep(${i})">⊕ Analizar en PFMEA</button><button class="btn" style="padding:3px 7px;font-size:10px" onclick="openStepModal(${i})">✎</button><button class="btn btn-danger" style="padding:3px 6px" onclick="deleteStep(${i})">×</button></div>`;
+      list.appendChild(convRow);
+      return;
+    }
+
+    // ── Regular step ──
+    const row=makeConnectorRow(s.type, i, i===0, i===pfdSteps.length-1, s);
+    if(row) list.appendChild(row);
     if(s.type==='dec'){
       const branches=document.createElement('div');
       branches.className='decision-branches';
-      branches.innerHTML=`
-        <div class="decision-branch yes">✓ SÍ → ${s.yes||'Siguiente paso'}</div>
-        <div class="decision-branch no">✗ NO → ${s.no||'Retrabajo / Scrap'}</div>
-      `;
+      branches.innerHTML=`<div class="decision-branch yes">✓ SÍ → ${s.yes||'Siguiente paso'}</div><div class="decision-branch no">✗ NO → ${s.no||'Retrabajo / Scrap'}</div>`;
       list.appendChild(branches);
     }
-  });
+  });;
 
   // End symbol
   list.appendChild(makeConnectorRow('end','',false,true));
 }
 
 function makeConnectorRow(type, idx, isFirst, isLast, step){
+  // diverge and converge handle their own rendering and appending
+  if(type==='diverge'||type==='converge') {
+    // These are handled inline in renderPFD forEach
+    return null;
+  }
+
   const row=document.createElement('div');
   row.className='pfd-step-card';
 
@@ -625,9 +841,12 @@ function makeConnectorRow(type, idx, isFirst, isLast, step){
 
   const content=document.createElement('div');
   content.className='content'+(step&&step.analyzed?' selected':'');
+  const isDiv  = step.type==='diverge';
+  const isConv = step.type==='converge';
+  const isOp   = step.type==='op'||step.type==='insp';
   const opInfo = step.type==='op'?`<div style="margin-top:3px;font-size:10px;color:var(--text3)">Función: ${step.func||'—'}</div>`:'';
   const analyzedBadge = step.analyzed?'<span class="badge blow">✓ Analizado</span>':'';
-  const isOp = step.type==='op'||step.type==='insp';
+  const divColor = isDiv?'color:var(--accent)':isConv?'color:var(--green)':'';
 
   content.innerHTML=`
     <div class="step-header">
@@ -692,6 +911,8 @@ function openAmefForStep(idx){
 function closeAmefModal(){
   document.getElementById('amef_modal').classList.remove('open');
   document.body.style.overflow='';
+  currentBranchDivergeIdx=-1; currentBranchName=''; currentBranchStepIdx=-1;
+  window._savingToBranch=false;
 }
 
 function confirmCloseAmefModal(){
@@ -991,19 +1212,37 @@ function saveAllRows(){
   // Add all new/updated rows
   modosTemp.forEach((m,mi)=>{
     causasTemp[mi].forEach(c=>{
+      const branchKey = (currentBranchDivergeIdx>=0 && currentBranchName)
+        ? currentBranchDivergeIdx+'_'+currentBranchName+'_'+currentBranchStepIdx
+        : null;
       rows.push({
-        op_id:currentPfdStep.op_id, proc_step:currentPfdStep.name, proc_func:currentPfdStep.func,
+        op_id:currentPfdStep.op_id,
+        proc_step: currentPfdStep.branch_context
+          ? '['+currentPfdStep.branch_context+'] '+currentPfdStep.name
+          : currentPfdStep.name,
+        proc_func:currentPfdStep.func,
         failure_mode:m.modo, failure_effect:m.efectos, efecto_critico:m.efecto_critico||'', sev:m.sev,
         failure_cause:c.causa, occ:c.occ,
         ctrl_prev:c.ctrl_prev, ctrl_det:c.ctrl_det, det:c.det, rpn:c.rpn,
-        rec_actions:c.acciones, resp:c.resp, taken:c.taken, res_rpn:0
+        rec_actions:c.acciones, resp:c.resp, taken:c.taken, res_rpn:0,
+        _branch_key: branchKey,
+        _branch_name: currentPfdStep.branch_context||null,
       });
     });
   });
 
   // Mark step as analyzed
-  const idx=pfdSteps.findIndex(s=>s.op_id===currentPfdStep.op_id);
-  if(idx>=0) pfdSteps[idx].analyzed=true;
+  if(currentBranchDivergeIdx>=0 && currentBranchName && currentBranchStepIdx>=0){
+    if(pfdSteps[currentBranchDivergeIdx]&&
+       pfdSteps[currentBranchDivergeIdx].branch_steps&&
+       pfdSteps[currentBranchDivergeIdx].branch_steps[currentBranchName]){
+      pfdSteps[currentBranchDivergeIdx].branch_steps[currentBranchName][currentBranchStepIdx].analyzed=true;
+    }
+    currentBranchDivergeIdx=-1; currentBranchName=''; currentBranchStepIdx=-1;
+  } else {
+    const idx=pfdSteps.findIndex(s=>s.op_id===currentPfdStep.op_id);
+    if(idx>=0) pfdSteps[idx].analyzed=true;
+  }
   renderPFD();
   renderAmefPage();
   updateSidebarStats();
@@ -1016,7 +1255,7 @@ function saveAllRows(){
 // ==================== AMEF PAGE ====================
 function renderAmefPage(){
   // Show ops buttons
-  const ops=pfdSteps.filter(s=>s.type==='op'||s.type==='insp');
+  const ops=pfdSteps.filter(s=>s.type==='op'||s.type==='insp'||(s.branch&&(s.type==='op'||s.type==='insp')));
   const container=document.getElementById('ops_from_pfd');
   if(ops.length===0){
     container.innerHTML='<div style="font-size:12px;color:var(--text3);padding:.75rem;background:var(--bg3);border-radius:var(--radius);border:1px solid var(--border)">Aún no hay operaciones en el diagrama de flujo. <button class="btn btn-ai" style="margin-left:8px" onclick="goPage(1)">Ir al diagrama →</button></div>';
@@ -1026,6 +1265,17 @@ function renderAmefPage(){
       const realIdx=pfdSteps.indexOf(s);
       const analyzed=s.analyzed?'<span class="badge blow" style="margin-left:4px">✓</span>':'';
       container.innerHTML+=`<button class="btn ${s.analyzed?'btn-green':'btn-ai'}" onclick="openAmefForStep(${realIdx})">${s.op_id} — ${s.name}${analyzed}</button>`;
+    });
+    // Add branch steps
+    pfdSteps.forEach((s,si)=>{
+      if(s.type!=='diverge') return;
+      Object.entries(s.branch_steps||{}).forEach(([bName, bSteps])=>{
+        bSteps.forEach((bs,bi)=>{
+          if(bs.type!=='op'&&bs.type!=='insp') return;
+          const analyzed=bs.analyzed?'<span class="badge blow" style="margin-left:4px">✓</span>':'';
+          container.innerHTML+=`<button class="btn ${bs.analyzed?'btn-green':'btn-ai'}" style="border-left:3px solid var(--accent)" onclick="openAmefForBranchStep(${si},'${bName}',${bi})">${bs.op_id} [${bName}] — ${bs.name}${analyzed}</button>`;
+        });
+      });
     });
     container.innerHTML+='</div>';
   }
@@ -1307,6 +1557,8 @@ async function exportCSV(){
     transp:{sym:'➡',label:'Transporte',    bg:TRANSP_BG},
     store: {sym:'🔺',label:'Almacenamiento',bg:STORE_BG},
     dec:   {sym:'🔶',label:'Decisión',     bg:DEC_BG},
+    div:   {sym:'⑃', label:'Divergencia',  bg:'EBF3FB'},
+    conv:  {sym:'⑂', label:'Convergencia', bg:'E2EFDA'},
   };
 
   // Start row
@@ -1318,11 +1570,39 @@ async function exportCSV(){
   ws1.getRow(pRow).height=20;
   pRow++;
 
-  pfdSteps.forEach((s,idx)=>{
+  // Build flat list including branch steps after their parent div
+  const flatSteps = [];
+  pfdSteps.forEach(s => {
+    flatSteps.push({...s, _isBranch:false});
+    if(s.type==='diverge' && s.branches && s.branches.length>0){
+      s.branches.forEach(branch => {
+        const branchSteps = pfdSteps.filter(bs=>bs.branch===branch);
+        if(branchSteps.length>0){
+          flatSteps.push({type:'_branchHeader', name:branch, op_id:'', func:'', analyzed:false, _isBranch:true, _branchName:branch});
+          branchSteps.forEach(bs => flatSteps.push({...bs, _isBranch:true, _branchLabel:branch}));
+        }
+      });
+    }
+  });
+
+  flatSteps.forEach((s,idx)=>{
+    if(s._isBranch && s.type==='_branchHeader'){
+      // Branch header row
+      ws1.merge_cells ? null : null;
+      const bhRow = pRow;
+      ws1.mergeCells('A'+bhRow+':H'+bhRow);
+      const bhCell = ws1.getCell('A'+bhRow);
+      bhCell.value = '  ↳ Rama: '+s._branchName;
+      bhCell.font=fn(true,9,BLUE_MED); bhCell.fill=fl('EBF3FB');
+      bhCell.alignment=al('left','center'); bhCell.border=bd();
+      ws1.getRow(bhRow).height=16;
+      pRow++;
+      return;
+    }
     const tm=typeMap[s.type]||{sym:'○',label:s.type,bg:WHITE};
+    const bg = s._isBranch ? 'F5F8FF' : tm.bg;
 
     // Main step row
-    const bg=tm.bg;
     const cells=[
       [1, tm.sym,   fn(false,14),  al('center','center')],
       [2, s.op_id||'', fn(true,10,BLUE_MED), al('center','center')],
@@ -1735,6 +2015,102 @@ function updateCP(ci, field, val){
   scheduleAutosave();
 }
 
+
+// ==================== BRANCH STEPS ====================
+
+let currentBranchDivergeIdx = -1;
+let currentBranchName = '';
+let editBranchStepIdx = -1;
+
+function openBranchStepModal(divergeIdx, branchName, editIdx){
+  currentBranchDivergeIdx = divergeIdx;
+  currentBranchName = branchName;
+  editBranchStepIdx = editIdx !== undefined ? editIdx : -1;
+
+  selectedStepType = '';
+  document.querySelectorAll('.step-type-btn').forEach(b=>b.classList.remove('sel'));
+  ['s_op_id','s_name','s_func','s_yes','s_no'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value='';
+  });
+  ['dec_fields','diverge_fields','converge_fields'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.style.display='none';
+  });
+
+  document.getElementById('step_modal_title').textContent =
+    (editBranchStepIdx>=0?'Editar':'Agregar') + ' paso — Rama: ' + branchName;
+
+  if(editBranchStepIdx>=0){
+    const bs = pfdSteps[divergeIdx].branch_steps[branchName][editBranchStepIdx];
+    selectStepType(bs.type);
+    document.getElementById('s_op_id').value = bs.op_id||'';
+    document.getElementById('s_name').value  = bs.name||'';
+    document.getElementById('s_func').value  = bs.func||'';
+  } else {
+    // Auto-number within branch
+    const branchSteps = pfdSteps[divergeIdx].branch_steps[branchName]||[];
+    if(branchSteps.length===0){
+      document.getElementById('s_op_id').value = pfdSteps[divergeIdx].op_id + '.10';
+    } else {
+      const last = branchSteps[branchSteps.length-1].op_id;
+      const parts = last.split('.');
+      const nextSub = (parseInt(parts[parts.length-1]||0)+10);
+      document.getElementById('s_op_id').value = parts.slice(0,-1).concat(nextSub).join('.');
+    }
+  }
+
+  document.getElementById('step_modal').classList.add('open');
+  document.body.style.overflow='hidden';
+
+  // Override saveStep to save to branch
+  window._savingToBranch = true;
+}
+
+function deleteBranchStep(divergeIdx, branchName, stepIdx){
+  if(confirm('¿Eliminar este paso de la rama?')){
+    pfdSteps[divergeIdx].branch_steps[branchName].splice(stepIdx,1);
+    renderPFD();
+    scheduleAutosave();
+  }
+}
+
+function openAmefForBranchStep(divergeIdx, branchName, stepIdx){
+  const bs = pfdSteps[divergeIdx].branch_steps[branchName][stepIdx];
+  currentPfdStep = {
+    ...bs,
+    branch_context: branchName,
+    diverge_op_id: pfdSteps[divergeIdx].op_id,
+  };
+  currentPfdStepIdx = -1;
+  currentBranchDivergeIdx = divergeIdx;
+  currentBranchName = branchName;
+  currentBranchStepIdx = stepIdx;
+  modosTemp=[]; causasTemp={};
+
+  const key = divergeIdx+'_'+branchName+'_'+stepIdx;
+  const existingRows = rows.filter(r=> r._branch_key === key);
+  if(existingRows.length>0){
+    existingRows.forEach(r=>{
+      let mi=modosTemp.findIndex(m=>m.modo===r.failure_mode);
+      if(mi<0){ mi=modosTemp.length; modosTemp.push({modo:r.failure_mode,efectos:r.failure_effect,efecto_critico:r.efecto_critico||'',sev:r.sev}); causasTemp[mi]=[]; }
+      causasTemp[mi].push({causa:r.failure_cause,ctrl_prev:r.ctrl_prev,ctrl_det:r.ctrl_det,occ:r.occ,det:r.det,rpn:r.rpn,acciones:r.rec_actions,resp:r.resp,taken:r.taken});
+    });
+    document.getElementById('amef_modal_sub').textContent='✎ Editando — Rama: '+branchName+' · '+existingRows.length+' renglón(es)';
+  } else {
+    document.getElementById('amef_modal_sub').textContent='Rama: '+branchName+' · '+bs.name;
+  }
+
+  document.getElementById('amef_modal_title').textContent='PFMEA — '+bs.op_id+': '+bs.name;
+  document.getElementById('e1_modo_manual').value='';
+  document.getElementById('modos_list').innerHTML='';
+  const ap = document.getElementById('ai_modes_p');
+  if(ap) ap.style.display='none';
+  goEtapa1Internal();
+  document.getElementById('amef_modal').classList.add('open');
+  document.body.style.overflow='hidden';
+  setTimeout(()=>{ renderModosList(); }, 50);
+}
+
+let currentBranchStepIdx = -1;
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2800);}
 
 // ==================== PERSISTENCIA ====================
