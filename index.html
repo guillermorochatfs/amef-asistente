@@ -2047,6 +2047,12 @@ function openBranchStepModal(divergeIdx, branchName, editIdx){
   currentBranchName = branchName;
   editBranchStepIdx = editIdx !== undefined ? editIdx : -1;
 
+  // Defensive init — ensure branch_steps and branch exist
+  const step = pfdSteps[divergeIdx];
+  if(!step){ console.error('Step not found:', divergeIdx); return; }
+  if(!step.branch_steps) step.branch_steps = {};
+  if(!step.branch_steps[branchName]) step.branch_steps[branchName] = [];
+
   selectedStepType = '';
   document.querySelectorAll('.step-type-btn').forEach(b=>b.classList.remove('sel'));
   ['s_op_id','s_name','s_func','s_yes','s_no'].forEach(id=>{
@@ -2060,16 +2066,18 @@ function openBranchStepModal(divergeIdx, branchName, editIdx){
     (editBranchStepIdx>=0?'Editar':'Agregar') + ' paso — Rama: ' + branchName;
 
   if(editBranchStepIdx>=0){
-    const bs = pfdSteps[divergeIdx].branch_steps[branchName][editBranchStepIdx];
-    selectStepType(bs.type);
-    document.getElementById('s_op_id').value = bs.op_id||'';
-    document.getElementById('s_name').value  = bs.name||'';
-    document.getElementById('s_func').value  = bs.func||'';
+    const bs = step.branch_steps[branchName][editBranchStepIdx];
+    if(bs){
+      selectStepType(bs.type);
+      document.getElementById('s_op_id').value = bs.op_id||'';
+      document.getElementById('s_name').value  = bs.name||'';
+      document.getElementById('s_func').value  = bs.func||'';
+    }
   } else {
     // Auto-number within branch
-    const branchSteps = pfdSteps[divergeIdx].branch_steps[branchName]||[];
+    const branchSteps = step.branch_steps[branchName];
     if(branchSteps.length===0){
-      document.getElementById('s_op_id').value = pfdSteps[divergeIdx].op_id + '.10';
+      document.getElementById('s_op_id').value = step.op_id + '.10';
     } else {
       const last = branchSteps[branchSteps.length-1].op_id;
       const parts = last.split('.');
@@ -2080,8 +2088,6 @@ function openBranchStepModal(divergeIdx, branchName, editIdx){
 
   document.getElementById('step_modal').classList.add('open');
   document.body.style.overflow='hidden';
-
-  // Override saveStep to save to branch
   window._savingToBranch = true;
 }
 
