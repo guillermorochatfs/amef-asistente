@@ -2200,6 +2200,19 @@ function loadFromStorage(){
   } catch(e){ console.error('Error cargando localStorage:', e); return false; }
 }
 
+function normalizePfdSteps(steps){
+  // Ensure every diverge step has branch_steps properly initialized
+  (steps||[]).forEach(function(s){
+    if(s.type==='diverge'){
+      if(!s.branch_steps) s.branch_steps = {};
+      (s.branches||[]).forEach(function(b){
+        if(!s.branch_steps[b]) s.branch_steps[b] = [];
+      });
+    }
+  });
+  return steps||[];
+}
+
 function applySession(session){
   if(session.header){
     Object.keys(session.header).forEach(function(k){
@@ -2209,7 +2222,7 @@ function applySession(session){
     const ref = document.getElementById('header_ref');
     if(ref) ref.textContent = session.header.pfmea_no || 'Sin número de PFMEA';
   }
-  if(Array.isArray(session.pfdSteps))    pfdSteps    = session.pfdSteps;
+  if(Array.isArray(session.pfdSteps))    pfdSteps    = normalizePfdSteps(session.pfdSteps);
   if(Array.isArray(session.rows))        rows        = session.rows;
   if(Array.isArray(session.controlPlan)) controlPlan = session.controlPlan;
   updateSidebarStats();
@@ -2282,6 +2295,8 @@ setInterval(saveToStorage, 15000);
 // ── Auto-load on page ready ──
 window.addEventListener('DOMContentLoaded', function(){
   const loaded = loadFromStorage();
+  // Always normalize in case of old session format
+  normalizePfdSteps(pfdSteps);
   if(loaded) showToast('Sesión restaurada automáticamente');
 });
 
