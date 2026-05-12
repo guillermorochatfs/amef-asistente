@@ -770,7 +770,13 @@ function renderPFD(){
         const bHeader=document.createElement('div');
         bHeader.style.cssText='background:var(--bg3);padding:6px 10px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border)';
         const branchSteps=(s.branch_steps||{})[branchName]||[];
-        bHeader.innerHTML=`<span style="font-size:12px;font-weight:500;color:var(--accent)">${branchName}</span><div style="display:flex;gap:4px;align-items:center"><span style="font-size:10px;color:var(--text3)">${branchSteps.length} paso(s)</span><button class="btn btn-ai" style="padding:2px 7px;font-size:10px" onclick="openBranchStepModal(${i},'${branchName}')">+ Paso</button></div>`;
+        const addBtn = document.createElement('button');
+        addBtn.className='btn btn-ai';
+        addBtn.style.cssText='padding:2px 7px;font-size:10px';
+        addBtn.textContent='+ Paso';
+        addBtn.onclick = (function(di,bn){ return function(){ openBranchStepModal(di,bn); }; })(i, branchName);
+        bHeader.innerHTML=`<span style="font-size:12px;font-weight:500;color:var(--accent)">${branchName}</span><div id="bh_right_${i}_${branchName.replace(/\s/g,'_')}" style="display:flex;gap:4px;align-items:center"><span style="font-size:10px;color:var(--text3)">${branchSteps.length} paso(s)</span></div>`;
+        bHeader.querySelector(`#bh_right_${i}_${branchName.replace(/\s/g,'_')}`).appendChild(addBtn);
         branchDiv.appendChild(bHeader);
         const bSteps=document.createElement('div');
         bSteps.style.cssText='padding:6px';
@@ -782,7 +788,21 @@ function renderPFD(){
             bsDiv.style.cssText='display:flex;align-items:center;gap:6px;padding:4px 6px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:4px';
             const analyzed=bs.analyzed||false;
             const isAnalyzable=bs.type==='op'||bs.type==='insp';
-            bsDiv.innerHTML=`<span style="font-family:var(--mono);font-size:9px;color:var(--accent)">${bs.op_id}</span><span style="font-size:11px;flex:1">${bs.name}</span>${analyzed?'<span class="badge blow" style="font-size:9px">✓</span>':''}${isAnalyzable?(analyzed?`<button class="btn btn-green" style="padding:2px 6px;font-size:9px" onclick="openAmefForBranchStep(${i},'${branchName}',${bi})">✎ PFMEA</button>`:`<button class="btn btn-ai" style="padding:2px 6px;font-size:9px" onclick="openAmefForBranchStep(${i},'${branchName}',${bi})">⊕ PFMEA</button>`):''}<button class="btn btn-danger" style="padding:2px 5px;font-size:9px" onclick="deleteBranchStep(${i},'${branchName}',${bi})">×</button>`;
+            bsDiv.innerHTML=`<span style="font-family:var(--mono);font-size:9px;color:var(--accent)">${bs.op_id}</span><span style="font-size:11px;flex:1">${bs.name}</span>${analyzed?'<span class="badge blow" style="font-size:9px">✓</span>':''}`;
+            if(isAnalyzable){
+              const pfBtn=document.createElement('button');
+              pfBtn.className=analyzed?'btn btn-green':'btn btn-ai';
+              pfBtn.style.cssText='padding:2px 6px;font-size:9px';
+              pfBtn.textContent=analyzed?'✎ PFMEA':'⊕ PFMEA';
+              pfBtn.onclick=(function(di,bn,bsi){ return function(){ openAmefForBranchStep(di,bn,bsi); }; })(i,branchName,bi);
+              bsDiv.appendChild(pfBtn);
+            }
+            const delBtn=document.createElement('button');
+            delBtn.className='btn btn-danger';
+            delBtn.style.cssText='padding:2px 5px;font-size:9px';
+            delBtn.textContent='×';
+            delBtn.onclick=(function(di,bn,bsi){ return function(){ deleteBranchStep(di,bn,bsi); }; })(i,branchName,bi);
+            bsDiv.appendChild(delBtn);
             bSteps.appendChild(bsDiv);
           });
         }
