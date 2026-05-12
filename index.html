@@ -330,14 +330,14 @@ textarea{min-height:54px}
         <div class="card-title">Identificación del documento</div>
         <div class="g2">
           <div class="field"><div class="fl">Número de PFMEA <span class="req">*</span></div><input type="text" id="pfmea_no" placeholder="Ej: PFMEA-CYD-2025-001" oninput="updateHeader()"></div>
-          <div class="field"><div class="fl">Producto / Proceso <span class="req">*</span></div><input type="text" id="product" placeholder="Ej: Ensamble de filtros — Tip Expansion"></div>
+          <div class="field"><div class="fl">Producto / Proceso <span class="req">*</span></div><input type="text" id="product" oninput="scheduleAutosave()" placeholder="Ej: Ensamble de filtros — Tip Expansion"></div>
         </div>
         <div class="g2">
-          <div class="field"><div class="fl">Preparado por <span class="req">*</span></div><input type="text" id="prepared_by" placeholder="Nombre del responsable"></div>
-          <div class="field"><div class="fl">Fecha de revisión</div><input type="date" id="rev_date"></div>
+          <div class="field"><div class="fl">Preparado por <span class="req">*</span></div><input type="text" id="prepared_by" oninput="scheduleAutosave()" placeholder="Nombre del responsable"></div>
+          <div class="field"><div class="fl">Fecha de revisión</div><input type="date" id="rev_date" onchange="scheduleAutosave()"></div>
         </div>
-        <div class="field"><div class="fl">Miembros del equipo</div><input type="text" id="team_members" placeholder="Ej: Ing. Rocha, Ing. García, Técnico López..."></div>
-        <div class="field"><div class="fl">Aprobación</div><input type="text" id="approval" placeholder="Nombre o referencia del aprobador"></div>
+        <div class="field"><div class="fl">Miembros del equipo</div><input type="text" id="team_members" oninput="scheduleAutosave()" placeholder="Ej: Ing. Rocha, Ing. García, Técnico López..."></div>
+        <div class="field"><div class="fl">Aprobación</div><input type="text" id="approval" oninput="scheduleAutosave()" placeholder="Nombre o referencia del aprobador"></div>
       </div>
       <div class="nav-row"><span></span><button class="btn btn-primary" onclick="goPage(1)">Siguiente: Diagrama de flujo →</button></div>
     </div>
@@ -1742,43 +1742,43 @@ function showToast(msg){const t=document.getElementById('toast');t.textContent=m
 const STORAGE_KEY = 'amef_session_v1';
 let autosaveTimer = null;
 
+function getHeaderValues(){
+  const ids = ['pfmea_no','product','prepared_by','rev_date','team_members','approval'];
+  const result = {};
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    result[id] = el ? el.value : '';
+  });
+  return result;
+}
+
 function saveToStorage(){
   try {
-    const session = buildSession();
+    const session = {
+      version:     '1.0',
+      savedAt:     new Date().toISOString(),
+      header:      getHeaderValues(),
+      pfdSteps:    JSON.parse(JSON.stringify(pfdSteps)),
+      rows:        JSON.parse(JSON.stringify(rows)),
+      controlPlan: JSON.parse(JSON.stringify(controlPlan)),
+    };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
     const ind = document.getElementById('autosave_indicator');
     if(ind){
       const now = new Date();
       const hh = now.getHours().toString().padStart(2,'0');
       const mm = now.getMinutes().toString().padStart(2,'0');
-      ind.textContent = '✓ Guardado ' + hh + ':' + mm;
+      const ss = now.getSeconds().toString().padStart(2,'0');
+      ind.textContent = '✓ ' + hh + ':' + mm + ':' + ss;
       ind.style.color = 'var(--green)';
-      setTimeout(()=>{ ind.style.color='var(--text3)'; }, 2000);
+      setTimeout(()=>{ if(ind) ind.style.color='var(--text3)'; }, 2000);
     }
-  } catch(e){ console.error('Error guardando:', e); }
+  } catch(e){ console.error('Error guardando en localStorage:', e); }
 }
 
 function scheduleAutosave(){
   clearTimeout(autosaveTimer);
-  autosaveTimer = setTimeout(saveToStorage, 1500);
-}
-
-function buildSession(){
-  return {
-    version: '1.0',
-    savedAt: new Date().toISOString(),
-    header: {
-      pfmea_no:     document.getElementById('pfmea_no')     ? document.getElementById('pfmea_no').value     : '',
-      product:      document.getElementById('product')      ? document.getElementById('product').value      : '',
-      prepared_by:  document.getElementById('prepared_by')  ? document.getElementById('prepared_by').value  : '',
-      rev_date:     document.getElementById('rev_date')      ? document.getElementById('rev_date').value     : '',
-      team_members: document.getElementById('team_members') ? document.getElementById('team_members').value : '',
-      approval:     document.getElementById('approval')     ? document.getElementById('approval').value     : '',
-    },
-    pfdSteps:    pfdSteps,
-    rows:        rows,
-    controlPlan: controlPlan,
-  };
+  autosaveTimer = setTimeout(saveToStorage, 800);
 }
 
 function loadFromStorage(){
@@ -1786,28 +1786,30 @@ function loadFromStorage(){
     const raw = localStorage.getItem(STORAGE_KEY);
     if(!raw) return false;
     const session = JSON.parse(raw);
+    if(!session || !session.version) return false;
     applySession(session);
     const ind = document.getElementById('autosave_indicator');
     if(ind && session.savedAt){
       const d = new Date(session.savedAt);
-      ind.textContent = '↺ Restaurado ' + d.toLocaleDateString('es-MX');
+      ind.textContent = '↺ ' + d.toLocaleDateString('es-MX') + ' ' + d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
       ind.style.color = 'var(--accent)';
     }
     return true;
-  } catch(e){ console.error('Error cargando:', e); return false; }
+  } catch(e){ console.error('Error cargando localStorage:', e); return false; }
 }
 
 function applySession(session){
   if(session.header){
-    Object.keys(session.header).forEach(k => {
+    Object.keys(session.header).forEach(function(k){
       const el = document.getElementById(k);
       if(el) el.value = session.header[k] || '';
     });
-    updateHeader();
+    const ref = document.getElementById('header_ref');
+    if(ref) ref.textContent = session.header.pfmea_no || 'Sin número de PFMEA';
   }
-  if(session.pfdSteps)    pfdSteps    = session.pfdSteps;
-  if(session.rows)        rows        = session.rows;
-  if(session.controlPlan) controlPlan = session.controlPlan;
+  if(Array.isArray(session.pfdSteps))    pfdSteps    = session.pfdSteps;
+  if(Array.isArray(session.rows))        rows        = session.rows;
+  if(Array.isArray(session.controlPlan)) controlPlan = session.controlPlan;
   updateSidebarStats();
   if(currentPage===1) renderPFD();
   if(currentPage===2) renderAmefPage();
@@ -1815,15 +1817,20 @@ function applySession(session){
 }
 
 function exportSession(){
-  const session = buildSession();
-  const pfmea = document.getElementById('pfmea_no') ? document.getElementById('pfmea_no').value : 'AMEF';
-  const date  = new Date().toISOString().slice(0,10);
-  const blob  = new Blob([JSON.stringify(session, null, 2)], {type:'application/json'});
-  const url   = URL.createObjectURL(blob);
-  const a     = document.createElement('a');
-  a.href = url; a.download = 'AMEF_' + pfmea + '_' + date + '.json'; a.click();
+  saveToStorage(); // force save before export
+  const header = getHeaderValues();
+  const pfmea  = header.pfmea_no || 'AMEF';
+  const date   = new Date().toISOString().slice(0,10);
+  const session = {
+    version:'1.0', savedAt:new Date().toISOString(),
+    header, pfdSteps, rows, controlPlan
+  };
+  const blob = new Blob([JSON.stringify(session, null, 2)], {type:'application/json'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href=url; a.download='AMEF_'+pfmea+'_'+date+'.json'; a.click();
   URL.revokeObjectURL(url);
-  showToast('Sesión guardada como archivo JSON');
+  showToast('Sesión guardada como JSON');
 }
 
 function importSession(event){
@@ -1838,10 +1845,10 @@ function importSession(event){
       saveToStorage();
       const nr = session.rows ? session.rows.length : 0;
       const np = session.pfdSteps ? session.pfdSteps.length : 0;
-      showToast('Sesión cargada — ' + nr + ' renglones AMEF, ' + np + ' pasos PFD');
+      showToast('Sesión cargada — ' + nr + ' renglones, ' + np + ' pasos PFD');
       goPage(0);
     } catch(err){
-      alert('Error al cargar el archivo: ' + err.message);
+      alert('Error al cargar: ' + err.message);
     }
   };
   reader.readAsText(file);
@@ -1849,20 +1856,26 @@ function importSession(event){
 }
 
 function clearSession(){
-  if(confirm('¿Borrar todos los datos y empezar un AMEF nuevo? Esta acción no se puede deshacer.')){
+  if(confirm('¿Borrar todos los datos y empezar un AMEF nuevo? No se puede deshacer.')){
     localStorage.removeItem(STORAGE_KEY);
     pfdSteps=[]; rows=[]; controlPlan=[];
     ['pfmea_no','product','prepared_by','rev_date','team_members','approval'].forEach(function(id){
       const el = document.getElementById(id);
       if(el) el.value = '';
     });
-    updateHeader();
+    const ref = document.getElementById('header_ref');
+    if(ref) ref.textContent = 'Sin número de PFMEA';
+    const ind = document.getElementById('autosave_indicator');
+    if(ind) ind.textContent = '';
     updateSidebarStats();
     renderPFD();
     goPage(0);
     showToast('Datos borrados — listo para nuevo AMEF');
   }
 }
+
+// ── Intervalo de guardado cada 15 segundos (respaldo robusto) ──
+setInterval(saveToStorage, 15000);
 
 // ── Auto-load on page ready ──
 window.addEventListener('DOMContentLoaded', function(){
