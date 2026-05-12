@@ -297,18 +297,25 @@ textarea{min-height:54px}
 <!-- ── HEADER ── -->
 <div class="header-banner">
   <span class="title">Asistente AMEF</span>
-  <span class="pfmea-ref" id="header_ref">Sin número de PFMEA</span>
+  <div style="display:flex;align-items:center;gap:8px">
+    <span id="autosave_indicator" style="font-size:10px;color:var(--text3);font-family:var(--mono)"></span>
+    <button class="btn btn-ai" style="padding:4px 10px;font-size:11px" onclick="exportSession()">↓ Guardar sesión</button>
+    <button class="btn btn-ai" style="padding:4px 10px;font-size:11px" onclick="document.getElementById('import_json').click()">↑ Cargar sesión</button>
+    <input type="file" id="import_json" accept=".json" style="display:none" onchange="importSession(event)">
+    <span class="pfmea-ref" id="header_ref">Sin número de PFMEA</span>
+  </div>
 </div>
 
 <div class="app">
   <div class="sidebar">
-    <div class="logo">AMEF Asistente<span>PFMEA · AIAG 4th Ed. · V7.5</span></div>
+    <div class="logo">AMEF Asistente<span>PFMEA · AIAG 4th Ed. · V7.1-noAI</span></div>
     <div class="nav-section">Módulos</div>
     <button class="nav-btn active" id="nb0" onclick="goPage(0)"><span class="num">1</span> Encabezado</button>
     <button class="nav-btn" id="nb1" onclick="goPage(1)"><span class="num">2</span> Diagrama de flujo</button>
     <button class="nav-btn" id="nb2" onclick="goPage(2)"><span class="num">3</span> Tabla AMEF</button>
     <button class="nav-btn" id="nb3" onclick="goPage(3)"><span class="num">4</span> Plan de Control</button>
     <div class="stat-box"><div class="n" id="sb_steps">0</div><div class="l">Pasos en el diagrama</div></div>
+    <button class="btn btn-danger" style="width:100%;margin-top:.5rem;font-size:11px" onclick="clearSession()">🗑 Nuevo AMEF</button>
     <div class="stat-box"><div class="n" id="sb_rows">0</div><div class="l">Renglones AMEF</div></div>
     <div class="stat-box"><div class="n" id="sb_high" style="color:var(--red)">0</div><div class="l">RPN Alto (≥100)</div></div>
   </div>
@@ -480,6 +487,7 @@ function goPage(n){
 
 function updateHeader(){
   document.getElementById('header_ref').textContent=document.getElementById('pfmea_no').value||'Sin número de PFMEA';
+  scheduleAutosave();
 }
 
 // ==================== PFD ====================
@@ -541,6 +549,7 @@ function saveStep(){
   updateSidebarStats();
   closeStepModal();
   showToast(editStepIdx>=0?'Paso actualizado':'Paso agregado al diagrama');
+  scheduleAutosave();
 }
 
 function deleteStep(i){
@@ -548,6 +557,7 @@ function deleteStep(i){
     pfdSteps.splice(i,1);
     renderPFD();
     updateSidebarStats();
+    scheduleAutosave();
   }
 }
 
@@ -1000,6 +1010,7 @@ function saveAllRows(){
   closeAmefModal();
   const totalNew=modosTemp.reduce((a,m,mi)=>a+(causasTemp[mi]?causasTemp[mi].length:0),0);
   showToast(totalNew+' renglones actualizados en la tabla AMEF');
+  scheduleAutosave();
 }
 
 // ==================== AMEF PAGE ====================
@@ -1065,7 +1076,7 @@ function renderTable(){
   });
 }
 
-function deleteRow(i){if(confirm('¿Eliminar?')){rows.splice(i,1);renderTable();updateSidebarStats();}}
+function deleteRow(i){if(confirm('¿Eliminar?')){rows.splice(i,1);renderTable();updateSidebarStats();scheduleAutosave();}}
 
 function updateSidebarStats(){
   document.getElementById('sb_steps').textContent=pfdSteps.length;
@@ -1619,6 +1630,7 @@ function generateControlPlan(){
   controlPlan = newCP;
   renderControlPlanPage();
   showToast('Plan de Control generado — ' + controlPlan.length + ' líneas');
+  scheduleAutosave();
 }
 
 function rpnTipo(sev, rpn){
@@ -1720,9 +1732,144 @@ function renderControlPlanPage(){
 
 function updateCP(ci, field, val){
   controlPlan[ci][field] = val;
+  scheduleAutosave();
 }
 
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2800);}
+
+// ==================== PERSISTENCIA ====================
+
+const STORAGE_KEY = 'amef_session_v1';
+let autosaveTimer = null;
+
+function saveToStorage(){
+  try {
+    const session = buildSession();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+    const ind = document.getElementById('autosave_indicator');
+    if(ind){
+      const now = new Date();
+      const hh = now.getHours().toString().padStart(2,'0');
+      const mm = now.getMinutes().toString().padStart(2,'0');
+      ind.textContent = '✓ Guardado ' + hh + ':' + mm;
+      ind.style.color = 'var(--green)';
+      setTimeout(()=>{ ind.style.color='var(--text3)'; }, 2000);
+    }
+  } catch(e){ console.error('Error guardando:', e); }
+}
+
+function scheduleAutosave(){
+  clearTimeout(autosaveTimer);
+  autosaveTimer = setTimeout(saveToStorage, 1500);
+}
+
+function buildSession(){
+  return {
+    version: '1.0',
+    savedAt: new Date().toISOString(),
+    header: {
+      pfmea_no:     document.getElementById('pfmea_no')     ? document.getElementById('pfmea_no').value     : '',
+      product:      document.getElementById('product')      ? document.getElementById('product').value      : '',
+      prepared_by:  document.getElementById('prepared_by')  ? document.getElementById('prepared_by').value  : '',
+      rev_date:     document.getElementById('rev_date')      ? document.getElementById('rev_date').value     : '',
+      team_members: document.getElementById('team_members') ? document.getElementById('team_members').value : '',
+      approval:     document.getElementById('approval')     ? document.getElementById('approval').value     : '',
+    },
+    pfdSteps:    pfdSteps,
+    rows:        rows,
+    controlPlan: controlPlan,
+  };
+}
+
+function loadFromStorage(){
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return false;
+    const session = JSON.parse(raw);
+    applySession(session);
+    const ind = document.getElementById('autosave_indicator');
+    if(ind && session.savedAt){
+      const d = new Date(session.savedAt);
+      ind.textContent = '↺ Restaurado ' + d.toLocaleDateString('es-MX');
+      ind.style.color = 'var(--accent)';
+    }
+    return true;
+  } catch(e){ console.error('Error cargando:', e); return false; }
+}
+
+function applySession(session){
+  if(session.header){
+    Object.keys(session.header).forEach(k => {
+      const el = document.getElementById(k);
+      if(el) el.value = session.header[k] || '';
+    });
+    updateHeader();
+  }
+  if(session.pfdSteps)    pfdSteps    = session.pfdSteps;
+  if(session.rows)        rows        = session.rows;
+  if(session.controlPlan) controlPlan = session.controlPlan;
+  updateSidebarStats();
+  if(currentPage===1) renderPFD();
+  if(currentPage===2) renderAmefPage();
+  if(currentPage===3) renderControlPlanPage();
+}
+
+function exportSession(){
+  const session = buildSession();
+  const pfmea = document.getElementById('pfmea_no') ? document.getElementById('pfmea_no').value : 'AMEF';
+  const date  = new Date().toISOString().slice(0,10);
+  const blob  = new Blob([JSON.stringify(session, null, 2)], {type:'application/json'});
+  const url   = URL.createObjectURL(blob);
+  const a     = document.createElement('a');
+  a.href = url; a.download = 'AMEF_' + pfmea + '_' + date + '.json'; a.click();
+  URL.revokeObjectURL(url);
+  showToast('Sesión guardada como archivo JSON');
+}
+
+function importSession(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    try {
+      const session = JSON.parse(e.target.result);
+      if(!session.version) throw new Error('Formato no reconocido');
+      applySession(session);
+      saveToStorage();
+      const nr = session.rows ? session.rows.length : 0;
+      const np = session.pfdSteps ? session.pfdSteps.length : 0;
+      showToast('Sesión cargada — ' + nr + ' renglones AMEF, ' + np + ' pasos PFD');
+      goPage(0);
+    } catch(err){
+      alert('Error al cargar el archivo: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+function clearSession(){
+  if(confirm('¿Borrar todos los datos y empezar un AMEF nuevo? Esta acción no se puede deshacer.')){
+    localStorage.removeItem(STORAGE_KEY);
+    pfdSteps=[]; rows=[]; controlPlan=[];
+    ['pfmea_no','product','prepared_by','rev_date','team_members','approval'].forEach(function(id){
+      const el = document.getElementById(id);
+      if(el) el.value = '';
+    });
+    updateHeader();
+    updateSidebarStats();
+    renderPFD();
+    goPage(0);
+    showToast('Datos borrados — listo para nuevo AMEF');
+  }
+}
+
+// ── Auto-load on page ready ──
+window.addEventListener('DOMContentLoaded', function(){
+  const loaded = loadFromStorage();
+  if(loaded) showToast('Sesión restaurada automáticamente');
+});
+
 </script>
 </body>
 </html>
