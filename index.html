@@ -789,6 +789,15 @@ function renderPFD(){
             const analyzed=bs.analyzed||false;
             const isAnalyzable=bs.type==='op'||bs.type==='insp';
             bsDiv.innerHTML=`<span style="font-family:var(--mono);font-size:9px;color:var(--accent)">${bs.op_id}</span><span style="font-size:11px;flex:1">${bs.name}</span>${analyzed?'<span class="badge blow" style="font-size:9px">✓</span>':''}`;
+            // Edit button
+            const editBtn=document.createElement('button');
+            editBtn.className='btn';
+            editBtn.style.cssText='padding:2px 6px;font-size:9px';
+            editBtn.textContent='✎';
+            editBtn.title='Editar paso';
+            editBtn.onclick=(function(di,bn,bsi){ return function(){ openBranchStepModal(di,bn,bsi); }; })(i,branchName,bi);
+            bsDiv.appendChild(editBtn);
+            // PFMEA button
             if(isAnalyzable){
               const pfBtn=document.createElement('button');
               pfBtn.className=analyzed?'btn btn-green':'btn btn-ai';
@@ -797,6 +806,7 @@ function renderPFD(){
               pfBtn.onclick=(function(di,bn,bsi){ return function(){ openAmefForBranchStep(di,bn,bsi); }; })(i,branchName,bi);
               bsDiv.appendChild(pfBtn);
             }
+            // Delete button
             const delBtn=document.createElement('button');
             delBtn.className='btn btn-danger';
             delBtn.style.cssText='padding:2px 5px;font-size:9px';
@@ -2093,10 +2103,16 @@ function openBranchStepModal(divergeIdx, branchName, editIdx){
       document.getElementById('s_op_id').value = bs.op_id||'';
       document.getElementById('s_name').value  = bs.name||'';
       document.getElementById('s_func').value  = bs.func||'';
+      if(bs.type==='dec'){
+        document.getElementById('s_yes').value = bs.yes||'';
+        document.getElementById('s_no').value  = bs.no||'';
+      }
     }
+    document.getElementById('step_modal_title').textContent = 'Editar paso — Rama: ' + branchName;
   } else {
-    // Auto-number within branch using prefix
+    // Auto-number within branch
     document.getElementById('s_op_id').value = getNextBranchOpId(step, branchName);
+    document.getElementById('step_modal_title').textContent = 'Agregar paso — Rama: ' + branchName;
   }
 
   document.getElementById('step_modal').classList.add('open');
