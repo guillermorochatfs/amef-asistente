@@ -2042,6 +2042,27 @@ let currentBranchDivergeIdx = -1;
 let currentBranchName = '';
 let editBranchStepIdx = -1;
 
+
+function getBranchIndex(divergeStep, branchName){
+  // Returns 1-based index of branch in the branches array
+  const idx = (divergeStep.branches||[]).indexOf(branchName);
+  return idx >= 0 ? idx + 1 : 1;
+}
+
+function getNextBranchOpId(divergeStep, branchName){
+  const baseId = divergeStep.op_id;
+  const branchIdx = getBranchIndex(divergeStep, branchName);
+  const branchSteps = (divergeStep.branch_steps||{})[branchName]||[];
+  // Format: parentId.branchIndex.stepNumber → e.g. 20.1.10, 20.1.20, 20.2.10
+  const branchBase = baseId + '.' + branchIdx;
+  if(branchSteps.length === 0){
+    return branchBase + '.10';
+  }
+  const last = branchSteps[branchSteps.length-1].op_id;
+  const lastDot = last.lastIndexOf('.');
+  const nextStep = parseInt(last.substring(lastDot+1)||0) + 10;
+  return branchBase + '.' + nextStep;
+}
 function openBranchStepModal(divergeIdx, branchName, editIdx){
   currentBranchDivergeIdx = divergeIdx;
   currentBranchName = branchName;
@@ -2074,16 +2095,8 @@ function openBranchStepModal(divergeIdx, branchName, editIdx){
       document.getElementById('s_func').value  = bs.func||'';
     }
   } else {
-    // Auto-number within branch
-    const branchSteps = step.branch_steps[branchName];
-    if(branchSteps.length===0){
-      document.getElementById('s_op_id').value = step.op_id + '.10';
-    } else {
-      const last = branchSteps[branchSteps.length-1].op_id;
-      const parts = last.split('.');
-      const nextSub = (parseInt(parts[parts.length-1]||0)+10);
-      document.getElementById('s_op_id').value = parts.slice(0,-1).concat(nextSub).join('.');
-    }
+    // Auto-number within branch using prefix
+    document.getElementById('s_op_id').value = getNextBranchOpId(step, branchName);
   }
 
   document.getElementById('step_modal').classList.add('open');
